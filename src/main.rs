@@ -1,16 +1,84 @@
+use std::f32::consts::PI as pi;
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy_obj::*;
+use bevy_rapier3d::prelude::*;
 
 //Derivo de Komponantoj
 #[derive(Component)]
 struct XP(u16);
+
 #[derive(Component)]
 struct PlayerName(String);
+
 #[derive(Component)]
 struct Health(u8);
+
 #[derive(Component)]
 struct Player;
+
+#[derive(Component)]
+struct IsGround(bool);
+
+#[derive(Component)]
+struct Ground;
+
+#[derive(Component)]
+struct Coin;
+
+#[derive(Bundle)]
+struct PhysicsBundle {
+	rigidbody: RigidBody,
+	collider: Collider,
+	sensor: Sensor,
+	friction: Friction,
+	restitution: Restitution,
+	is_ground: IsGround,
+	
+	velocity: Velocity,
+	gravity: GravityScale,
+	mass_properties: MassProperties,
+	locked_axes: LockedAxes,
+	dominance: Dominance,
+	sleeping: Sleeping,
+	damping: Damping,
+	ccd: Ccd,
+	act: ActiveCollisionTypes,
+	events: ActiveEvents,
+	
+	force: ExternalForce,
+	impulse: ExternalImpulse,
+}
+
+impl Default for PhysicsBundle {
+	fn default() -> PhysicsBundle {
+		return PhysicsBundle {
+			rigidbody: RigidBody::Fixed,
+			collider: Collider::cuboid(1.0, 1.0, 1.0),
+			restitution: Restitution::default(),
+			sensor: Sensor(true),
+			friction: Friction::default(),
+			is_ground: IsGround(false),
+			
+			gravity: GravityScale(1.0),
+			velocity: Velocity {
+				linvel: Vec3::new(0.0, 0.0, 0.0),
+				angvel: Vec3::new(0.0, 0.0, 0.0),
+			},
+			mass_properties: MassProperties::default(),
+			locked_axes: LockedAxes::default(),
+			damping: Damping::default(),
+			dominance: Dominance::group(0),
+			sleeping: Sleeping::disabled(),
+			ccd: Ccd::enabled(),
+			act: ActiveCollisionTypes::default(),
+			events: ActiveEvents::COLLISION_EVENTS,
+			
+			force: ExternalForce::default(),
+			impulse: ExternalImpulse::default(),
+		}
+	}
+}
 
 #[derive(Bundle)]
 struct PlayerBundle {
@@ -18,9 +86,23 @@ struct PlayerBundle {
     name: PlayerName,
     health: Health,
     _p: Player,
+	
+	#[bundle]
+	physics: PhysicsBundle,
     
     #[bundle]
     pbr: PbrBundle,
+}
+
+#[derive(Bundle)]
+struct CoinBundle {
+	_c: Coin,
+	
+	#[bundle]
+	physics: PhysicsBundle,
+	
+	#[bundle]
+	pbr: PbrBundle,
 }
 
 fn main() {
@@ -42,24 +124,48 @@ fn main() {
         })
 		.add_plugins(DefaultPlugins)
 		.add_plugin(ObjPlugin)
-		.add_startup_system(spawn_scene)
+		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        .add_plugin(RapierDebugRenderPlugin::default())
+		.add_startup_system(setup)
 		.add_system(control_character)
+		.add_system(get_coin)
 		.run();
 }
 
-fn spawn_scene(
+fn setup(
+	mut windows: ResMut<Windows>,
 	mut commands: Commands,	
 	mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
 ) {
+	let window = windows.primary_mut();
+	window.set_cursor_lock_mode(true);
+	window.set_cursor_visibility(false);
+	
 	//Ludkampo
 	commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 4.0 })),
+        mesh: meshes.add(Mesh::from(shape::Plane { size: 16.0 })),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
         ..default()
-    });
+    })
+    .insert(Collider::cuboid(8.0, 0.1, 8.0))
+    .insert(Ground);
+    
+    commands.spawn()
+    .insert(Collider::cuboid(8.0, 0.5, 8.0))
+    .insert(Sensor(true))
+    .insert(Ground);
+    
+    commands.spawn_bundle(PbrBundle {
+        mesh: meshes.add(Mesh::from(shape::Plane { size: 16.0 })),
+        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
+        transform: Transform::from_xyz(0.0, 0.0, 0.0),
+        ..default()
+    })
+    .insert(Collider::cuboid(8.0, 0.1, 8.0))
+    .insert(Ground);
     //Lumo
     commands.spawn_bundle(PointLightBundle {
         point_light: PointLight {
@@ -72,7 +178,7 @@ fn spawn_scene(
     });
 	//Kamerao
 	commands.spawn_bundle(PerspectiveCameraBundle {
-		transform: Transform::from_xyz(0.0, 5.0, 0.0).looking_at(Vec3::ZERO, Vec3::Z),
+		transform: Transform::from_xyz(0.0, 16.0, -16.0).looking_at(Vec3::ZERO, Vec3::Z),
         ..default()
 	});
 	//Ludanto
@@ -81,27 +187,115 @@ fn spawn_scene(
 		name: PlayerName(String::from("Player123")),
 		health: Health(100),
 		_p: Player,
+		
+		physics: PhysicsBundle {
+			rigidbody: RigidBody::Dynamic,
+			collider: Collider::ball(1.0f32),
+			sensor: Sensor(false),
+			
+			restitution: Restitution::coefficient(0.7),
+			dominance: Dominance::group(2),
+			..default()
+		},
+		
 		pbr: PbrBundle {
 			mesh: assets.load("models/player.obj"),
 			material: materials.add(diffuse_mat("textures/player.jpg", &assets)),
-			transform: Transform::from_xyz(0.0, 0.0, 0.0),
+			transform: Transform::from_xyz(0.0, 4.0, 0.0),
 			..default()
 		},
-	});	
+	});
+	//Moneroj
+	commands.spawn_bundle(CoinBundle {
+		_c: Coin,
+		
+		physics: PhysicsBundle {
+			collider: Collider::cuboid(0.6, 0.2, 0.6),
+			..default()
+		},
+		
+		pbr: PbrBundle {
+			mesh: meshes.add(Mesh::from(shape::Torus {
+				radius: 0.5,
+				ring_radius: 0.1,
+				subdivisions_segments: 16,
+				subdivisions_sides: 16,
+			})),
+			material: materials.add(golden_mat()),
+			transform: Transform {
+				translation: Vec3::new(4.0, 2.0, 4.0),
+				rotation: Quat::from_axis_angle(Vec3::X, radian(90.0)),
+				scale: Vec3::new(1.0, 1.0, 1.0),
+			},
+			..default()
+		},
+	});
+
 }
 
 fn control_character(
 	keys: Res<Input<KeyCode>>,
-	time: Res<Time>,
-	mut query: Query<(&Health, &mut Transform, Option<&Player>)>,
+	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, Entity, &mut IsGround, &Player)>,
+	mut ground_query: Query<(Entity, &Ground)>,
+	mut camera_query: Query<(&mut Transform, &Camera), Without<Player>>,
+	mut collision_events: EventReader<CollisionEvent>
+){	
+	let (_health, transform, mut _player_force, mut _player_impulse, player_ent, mut is_ground, _player) = player_query.single_mut();
+	let (camera_transform, _camera) = camera_query.single_mut();
+	
+	for (ground_ent, _ground) in ground_query.iter_mut() {
+		for collision_event in collision_events.iter() {
+			if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
+				if (ground_ent.eq(ent1) && player_ent.eq(ent2)) || (ground_ent.eq(ent2) && player_ent.eq(ent1)) {
+					is_ground.0 = true;
+				}
+			}
+			
+			if let CollisionEvent::Stopped(ent1, ent2, _flags) = collision_event {
+				if (ground_ent.eq(ent1) && player_ent.eq(ent2)) || (ground_ent.eq(ent2) && player_ent.eq(ent1)) {
+					is_ground.0 = false;
+				}
+			}
+		}
+	}
+	
+	if keys.pressed(KeyCode::Up)    { _player_impulse.impulse = Vec3::new(0.0, 0.0, 1.0);}
+	if keys.pressed(KeyCode::Down)  { _player_impulse.impulse = Vec3::new(0.0, 0.0, -1.0);}
+	if keys.pressed(KeyCode::Left)  { _player_impulse.impulse = Vec3::new(1.0, 0.0, 0.0);}
+	if keys.pressed(KeyCode::Right) { _player_impulse.impulse = Vec3::new(-1.0, 0.0, 0.0);}
+	
+	if keys.pressed(KeyCode::Up) && keys.pressed(KeyCode::Left) 	{ _player_impulse.impulse = Vec3::new(1.0, 0.0, 1.0);}
+	if keys.pressed(KeyCode::Down) && keys.pressed(KeyCode::Left)   { _player_impulse.impulse = Vec3::new(1.0, 0.0, -1.0);}
+	if keys.pressed(KeyCode::Up) && keys.pressed(KeyCode::Right)    { _player_impulse.impulse = Vec3::new(-1.0, 0.0, 1.0);}
+	if keys.pressed(KeyCode::Down) && keys.pressed(KeyCode::Right)  { _player_impulse.impulse = Vec3::new(-1.0, 0.0, -1.0);}
+       
+    if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 25.0, 0.0);}
+      
+    *camera_transform.into_inner() = Transform::from_xyz(transform.translation.x, 
+														 transform.translation.y + 16.0, 
+														 transform.translation.z - 16.0)
+											.looking_at(transform.translation, Vec3::Z);
+	
+}
+
+fn get_coin(
+	mut commands: Commands,
+	mut q_player: Query<(Entity, &mut XP, &Player)>,
+	mut q_coin: Query<(Entity, &Coin)>,
+	mut collision_events: EventReader<CollisionEvent>,
 ){
-	
-	let (_health, mut transform, _player) = query.single_mut();
-	
-	if keys.pressed(KeyCode::Up)    { transform.translation.z += 2.0 * time.delta_seconds();}
-	if keys.pressed(KeyCode::Down)  { transform.translation.z -= 2.0 * time.delta_seconds();}
-	if keys.pressed(KeyCode::Left)  { transform.translation.x += 2.0 * time.delta_seconds();}
-	if keys.pressed(KeyCode::Right) { transform.translation.x -= 2.0 * time.delta_seconds();}
+
+	let (player_ent, mut xp, _player) = q_player.single_mut();
+	for (coin_ent, _coin) in q_coin.iter_mut() {
+		for collision_event in collision_events.iter() {
+			if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
+				if (player_ent.eq(ent1) && coin_ent.eq(ent2)) || (player_ent.eq(ent2) && coin_ent.eq(ent1)) {
+					xp.0 += 1;
+					commands.entity(coin_ent).despawn();
+				}
+			}
+		}
+	}
 	
 }
 
@@ -112,4 +306,24 @@ fn diffuse_mat(path: &str, assets: &Res<AssetServer>) -> StandardMaterial {
         unlit: true,
 		..default()
 	}
+}
+
+fn golden_mat() -> StandardMaterial {
+	return StandardMaterial {
+		base_color: Color::GOLD,
+		perceptual_roughness: 0.2,
+		metallic: 1.0,
+		reflectance: 1.0,
+		unlit: false,
+		double_sided: false,
+		..default()
+	};
+}
+
+fn _print_type<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>());
+}
+
+fn radian(deg: f32) -> f32 {
+	return deg * pi / 180.0; 
 }
