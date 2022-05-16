@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { version = "0.7", features=["jpeg"] }
+bevy = { version = "0.7", features=["jpeg", "dynamic"] }
 bevy_obj = "0.7.0"
 bevy_rapier3d = { version = "0.13.2", features=["debug-render"] }
 

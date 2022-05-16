@@ -1,6 +1,8 @@
 use std::f32::consts::PI as pi;
+use std::f32;
 use bevy::prelude::*;
 use bevy::window::*;
+use bevy::input::mouse::MouseMotion;
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
 
@@ -25,6 +27,9 @@ struct Ground;
 
 #[derive(Component)]
 struct Coin;
+
+#[derive(Component)]
+struct PlayerEmpty;
 
 #[derive(Bundle)]
 struct PhysicsBundle {
@@ -111,7 +116,7 @@ fn main() {
 			title: "Kampludejo".to_string(),
 			resizable: true,
 			decorations: false,
-			mode: WindowMode::BorderlessFullscreen,
+			mode: WindowMode::Windowed,
 			cursor_locked: false,
 			cursor_visible: true,
 			present_mode: PresentMode::Mailbox,
@@ -144,27 +149,18 @@ fn setup(
 	window.set_cursor_visibility(false);
 	
 	//Ludkampo
-	commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 16.0 })),
-        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    })
-    .insert(Collider::cuboid(8.0, 0.1, 8.0))
-    .insert(Ground);
-    
     commands.spawn()
-    .insert(Collider::cuboid(8.0, 0.5, 8.0))
+    .insert(Collider::cuboid(64.0, 0.5, 64.0))
     .insert(Sensor(true))
     .insert(Ground);
     
     commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 16.0 })),
+        mesh: meshes.add(Mesh::from(shape::Plane { size: 128.0 })),
         material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
         transform: Transform::from_xyz(0.0, 0.0, 0.0),
         ..default()
     })
-    .insert(Collider::cuboid(8.0, 0.1, 8.0))
+    .insert(Collider::cuboid(64.0, 0.1, 64.0))
     .insert(Ground);
     //Lumo
     commands.spawn_bundle(PointLightBundle {
@@ -176,11 +172,6 @@ fn setup(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
-	//Kamerao
-	commands.spawn_bundle(PerspectiveCameraBundle {
-		transform: Transform::from_xyz(0.0, 16.0, -16.0).looking_at(Vec3::ZERO, Vec3::Z),
-        ..default()
-	});
 	//Ludanto
 	commands.spawn_bundle(PlayerBundle {
 		xp: XP(0),
@@ -205,6 +196,22 @@ fn setup(
 			..default()
 		},
 	});
+	
+	let empty_child = commands.spawn_bundle(TransformBundle {
+		local: Transform::from_xyz(0.0, 0.0, 0.0),
+		..default()
+	})
+	.insert(PlayerEmpty)
+	.id();
+	
+	let camera_child = commands.spawn_bundle(PerspectiveCameraBundle {
+		transform: Transform::from_xyz(0.0, 16.0, -16.0),
+        ..default()
+	})
+	.id();
+	
+	commands.entity(empty_child).push_children(&[camera_child]);
+	
 	//Moneroj
 	commands.spawn_bundle(CoinBundle {
 		_c: Coin,
@@ -235,13 +242,17 @@ fn setup(
 
 fn control_character(
 	keys: Res<Input<KeyCode>>,
+	time: Res<Time>,
+	mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+	mut empty_query:  Query<&mut Transform, (With<PlayerEmpty>, Without<Player>, Without<Camera>)>,
 	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, Entity, &mut IsGround, &Player)>,
 	mut ground_query: Query<(Entity, &Ground)>,
-	mut camera_query: Query<(&mut Transform, &Camera), Without<Player>>,
-	mut collision_events: EventReader<CollisionEvent>
+	mut collision_events: EventReader<CollisionEvent>,
+	mut mouse_events: EventReader<MouseMotion>,
 ){	
 	let (_health, transform, mut _player_force, mut _player_impulse, player_ent, mut is_ground, _player) = player_query.single_mut();
-	let (camera_transform, _camera) = camera_query.single_mut();
+	let mut empty_transform  = empty_query.single_mut();
+	let mut camera_transform = camera_query.single_mut();
 	
 	for (ground_ent, _ground) in ground_query.iter_mut() {
 		for collision_event in collision_events.iter() {
@@ -269,13 +280,15 @@ fn control_character(
 	if keys.pressed(KeyCode::Up) && keys.pressed(KeyCode::Right)    { _player_impulse.impulse = Vec3::new(-1.0, 0.0, 1.0);}
 	if keys.pressed(KeyCode::Down) && keys.pressed(KeyCode::Right)  { _player_impulse.impulse = Vec3::new(-1.0, 0.0, -1.0);}
        
-    if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 25.0, 0.0);}
-      
-    *camera_transform.into_inner() = Transform::from_xyz(transform.translation.x, 
-														 transform.translation.y + 16.0, 
-														 transform.translation.z - 16.0)
-											.looking_at(transform.translation, Vec3::Z);
+    if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 25.0, 0.0);}			
 	
+	camera_transform.rotation = camera_transform.looking_at(Vec3::ZERO, Vec3::Z).rotation;
+	empty_transform.translation = transform.translation;
+	
+	for ev in mouse_events.iter() {
+		empty_transform.rotate(Quat::from_axis_angle(Vec3::X, radian(ev.delta.y)));
+		empty_transform.rotate(Quat::from_axis_angle(Vec3::Y, radian(ev.delta.x)));		
+    }
 }
 
 fn get_coin(
@@ -327,3 +340,4 @@ fn _print_type<T>(_: &T) {
 fn radian(deg: f32) -> f32 {
 	return deg * pi / 180.0; 
 }
+
