@@ -7,6 +7,12 @@ use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
 
 //Derivo de Komponantoj
+#[derive(Default)]
+struct Rotation {
+	alpha: f32,
+	beta: f32,
+}
+
 #[derive(Component)]
 struct XP(u16);
 
@@ -127,6 +133,7 @@ fn main() {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
+        .insert_resource(Rotation {alpha: 0.0, beta: 0.0})
 		.add_plugins(DefaultPlugins)
 		.add_plugin(ObjPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
@@ -231,7 +238,7 @@ fn setup(
 			material: materials.add(golden_mat()),
 			transform: Transform {
 				translation: Vec3::new(4.0, 2.0, 4.0),
-				rotation: Quat::from_axis_angle(Vec3::X, radian(90.0)),
+				rotation: Quat::from_axis_angle(Vec3::X, radian(0.0)),
 				scale: Vec3::new(1.0, 1.0, 1.0),
 			},
 			..default()
@@ -243,6 +250,7 @@ fn setup(
 fn control_character(
 	keys: Res<Input<KeyCode>>,
 	time: Res<Time>,
+	mut rotation: ResMut<Rotation>,
 	mut camera_query: Query<&mut Transform, (With<Camera>, Without<Player>)>,
 	mut empty_query:  Query<&mut Transform, (With<PlayerEmpty>, Without<Player>, Without<Camera>)>,
 	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, Entity, &mut IsGround, &Player)>,
@@ -286,8 +294,27 @@ fn control_character(
 	empty_transform.translation = transform.translation;
 	
 	for ev in mouse_events.iter() {
-		empty_transform.rotate(Quat::from_axis_angle(Vec3::X, radian(ev.delta.y)));
-		empty_transform.rotate(Quat::from_axis_angle(Vec3::Y, radian(ev.delta.x)));		
+		rotation.alpha += radian(ev.delta.y);
+		rotation.beta  += radian(ev.delta.x);
+				
+		/*empty_transform.rotate(Quat::from_axis_angle(Vec3::new(
+		
+												f32::cos(rotation.alpha),
+												0.0,
+												f32::sqrt(1.0 - (f32::cos(rotation.alpha)*f32::cos(rotation.alpha))),
+		
+																), radian(ev.delta.y)));   //ŝanĝo laŭ X
+																
+		empty_transform.rotate(Quat::from_axis_angle(Vec3::new(
+		
+												0.0,
+												f32::cos(rotation.beta),
+												f32::sqrt(1.0 - (f32::cos(rotation.beta)*f32::cos(rotation.beta))),
+		
+																), radian(-ev.delta.x)));	  //ŝanĝo laŭ Y*/
+																
+		empty_transform.rotate(Quat::from_axis_angle(Vec3::new(0.0, 1.0, 0.0), radian(-ev.delta.x)));
+		
     }
 }
 
