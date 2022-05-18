@@ -2,6 +2,7 @@ pub mod lib;
 
 use std::f32::consts::PI as pi;
 use std::f32;
+use std::ops::Mul;
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy_obj::*;
@@ -267,17 +268,27 @@ fn control_character(
 		}
 	}
 	
-	if keys.pressed(KeyCode::W) { _player_impulse.impulse = Vec3::new(0.0, 0.0, 1.0);}
-	if keys.pressed(KeyCode::S) { _player_impulse.impulse = Vec3::new(0.0, 0.0, -1.0);}
-	if keys.pressed(KeyCode::A) { _player_impulse.impulse = Vec3::new(1.0, 0.0, 0.0);}
-	if keys.pressed(KeyCode::D) { _player_impulse.impulse = Vec3::new(-1.0, 0.0, 0.0);}
+	let ct0 = Vec3::new(camera_transform.translation.x,			//
+						camera_transform.translation.y - 16.0,	//Kameraa Transformo je NULA Alteco
+						camera_transform.translation.z); 		//
+	let direct_vector = Vec3::new((transform.translation.x - ct0.x) / 16.0,
+								  0.0,
+								  (transform.translation.z - ct0.z) / 16.0);
+	let perp_vector = Quat::from_axis_angle(Vec3::Y, radian(90.0)).mul(direct_vector);
 	
-	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::A) { _player_impulse.impulse = Vec3::new(1.0, 0.0, 1.0);}
-	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::A) { _player_impulse.impulse = Vec3::new(1.0, 0.0, -1.0);}
-	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::D) { _player_impulse.impulse = Vec3::new(-1.0, 0.0, 1.0);}
-	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::D) { _player_impulse.impulse = Vec3::new(-1.0, 0.0, -1.0);}
+	if keys.pressed(KeyCode::W) { _player_impulse.impulse = direct_vector;}
+	if keys.pressed(KeyCode::S) { _player_impulse.impulse = -direct_vector;}
+	if keys.pressed(KeyCode::A) { _player_impulse.impulse = perp_vector;}
+	if keys.pressed(KeyCode::D) { _player_impulse.impulse = -perp_vector;}
+	
+	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::A) { _player_impulse.impulse = direct_vector + perp_vector;}
+	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::A) { _player_impulse.impulse = perp_vector - direct_vector;}
+	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::D) { _player_impulse.impulse = direct_vector - perp_vector;}
+	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::D) { _player_impulse.impulse =-direct_vector - perp_vector;}
        
     if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 25.0, 0.0);}
+    
+    println!("{:?}", _player_impulse.impulse);
     
     poc.focus = transform.translation;
 }
