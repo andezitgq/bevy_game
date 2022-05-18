@@ -1,14 +1,15 @@
 pub mod lib;
 
 use std::f32::consts::PI as pi;
-use std::f32;
 use std::ops::Mul;
 use bevy::prelude::*;
 use bevy::window::*;
+use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
 
 use lib::orbit_camera::*;
+use lib::ui::*;
 
 //Derivo de Komponantoj
 #[derive(Component)]
@@ -132,8 +133,10 @@ fn main() {
 		.add_plugin(ObjPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
+        .add_system(texture_filtering)
 		.add_startup_system(setup)
 		.add_startup_system(spawn_camera)
+		.add_startup_system(setup_ui)
 		.add_system(control_character)
 		.add_system(pan_orbit_camera)
 		.add_system(get_coin)
@@ -228,7 +231,7 @@ fn setup(
 
 }
 
-pub fn spawn_camera(mut commands: Commands) {
+fn spawn_camera(mut commands: Commands) {
     let translation = Vec3::new(0.0, 16.0, -16.0);
     let radius = translation.length();
 
@@ -287,9 +290,7 @@ fn control_character(
 	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::D) { _player_impulse.impulse =-direct_vector - perp_vector;}
        
     if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 25.0, 0.0);}
-    
-    println!("{:?}", _player_impulse.impulse);
-    
+        
     poc.focus = transform.translation;
 }
 
@@ -314,7 +315,28 @@ fn get_coin(
 	
 }
 
-fn diffuse_mat(path: &str, assets: &Res<AssetServer>) -> StandardMaterial {
+fn texture_filtering(
+	mut tex_events: EventReader<AssetEvent<Image>>,
+	mut images: ResMut<Assets<Image>>
+) {
+	let desc = SamplerDescriptor {
+		mag_filter: FilterMode::Linear,
+		min_filter: FilterMode::Linear,
+		mipmap_filter: FilterMode::Linear,
+		
+		..default()
+	};
+		
+	for event in tex_events.iter() {
+		if let AssetEvent::Created{handle} = event {
+			if let Some(txt) = images.get_mut(handle) {
+				txt.sampler_descriptor = desc.clone();
+			}
+		}
+	}
+}
+
+fn diffuse_mat(path: &str, assets: &Res<AssetServer>) -> StandardMaterial {	
 	StandardMaterial {
 		base_color_texture: Some(assets.load(path)),
 		alpha_mode: AlphaMode::Blend,
