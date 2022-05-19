@@ -10,6 +10,7 @@ use bevy_rapier3d::prelude::*;
 
 use lib::orbit_camera::*;
 use lib::ui::*;
+use lib::menu::*;
 
 //Derivo de Komponantoj
 #[derive(Component)]
@@ -129,14 +130,19 @@ fn main() {
             color: Color::WHITE,
             brightness: 1.0 / 5.0f32,
         })
+        
 		.add_plugins(DefaultPlugins)
 		.add_plugin(ObjPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
+        
+        .add_state(AppState::MainMenu)
+        
         .add_system(texture_filtering)
 		.add_startup_system(setup)
 		.add_startup_system(spawn_camera)
 		.add_startup_system(setup_ui)
+		
 		.add_system(control_character)
 		.add_system(pan_orbit_camera)
 		.add_system(get_coin)
