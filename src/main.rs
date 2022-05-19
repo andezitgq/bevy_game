@@ -298,21 +298,27 @@ fn get_coin(
 	mut commands: Commands,
 	mut q_player: Query<(Entity, &mut XP, &Player)>,
 	mut q_coin: Query<(Entity, &Coin)>,
+	mut q_ui: Query<&mut Text>,
 	mut collision_events: EventReader<CollisionEvent>,
+	assets: Res<AssetServer>,
 ){
-
+	let mut text = q_ui.single_mut();
 	let (player_ent, mut xp, _player) = q_player.single_mut();
 	for (coin_ent, _coin) in q_coin.iter_mut() {
 		for collision_event in collision_events.iter() {
 			if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
 				if (player_ent.eq(ent1) && coin_ent.eq(ent2)) || (player_ent.eq(ent2) && coin_ent.eq(ent1)) {
 					xp.0 += 1;
+					text.sections[0] = TextSection {
+							value: String::from("Score: ") + &xp.0.to_string(),
+							style: defstyle(&assets),
+							..default()
+						};
 					commands.entity(coin_ent).despawn();
 				}
 			}
 		}
 	}
-	
 }
 
 fn texture_filtering(

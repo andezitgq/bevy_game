@@ -1,5 +1,13 @@
 use bevy::prelude::*;
 
+pub fn defstyle(asset_server: &Res<AssetServer>) -> TextStyle { 
+	TextStyle {
+		font: asset_server.load("fonts/ubuntu.ttf"),
+		font_size: 30.0,
+		color: Color::WHITE,
+	}
+}
+
 pub fn setup_ui(
 	mut commands: Commands, 
 	asset_server: Res<AssetServer>
@@ -44,12 +52,8 @@ pub fn setup_ui(
                                     ..default()
                                 },
                                 text: Text::with_section(
-                                    "Text Example",
-                                    TextStyle {
-                                        font: asset_server.load("fonts/ubuntu.ttf"),
-                                        font_size: 30.0,
-                                        color: Color::WHITE,
-                                    },
+                                    "Score: 0",
+                                    defstyle(&asset_server),
                                     Default::default(),
                                 ),
                                 ..default()
