@@ -7,10 +7,12 @@ use bevy::window::*;
 use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
+use bevy_egui::EguiPlugin;
+use iyes_loopless::prelude::*;
 
 use lib::orbit_camera::*;
 use lib::ui::*;
-use lib::menu::*;
+use lib::menu::*; 
 
 //Derivo de Komponantoj
 #[derive(Component)]
@@ -133,19 +135,38 @@ fn main() {
         
 		.add_plugins(DefaultPlugins)
 		.add_plugin(ObjPlugin)
+		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         .add_plugin(RapierDebugRenderPlugin::default())
         
-        .add_state(AppState::MainMenu)
+        .add_loopless_state(GameState::MainMenu) 
+
+        .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
+        
+        .add_enter_system(GameState::InGame, setup)
+        .add_enter_system(GameState::InGame, spawn_camera)
+        .add_enter_system(GameState::InGame, setup_ui)
+        .add_exit_system(GameState::InGame, despawn_with::<InGame>)
+        
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::MainMenu)
+                .with_system(main_menu)
+                .into()
+        )
+        
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::InGame)
+                .with_system(control_character)
+				.with_system(pan_orbit_camera)
+				.with_system(get_coin)
+                .into()
+        )
         
         .add_system(texture_filtering)
-		.add_startup_system(setup)
-		.add_startup_system(spawn_camera)
-		.add_startup_system(setup_ui)
-		
-		.add_system(control_character)
-		.add_system(pan_orbit_camera)
-		.add_system(get_coin)
+        .add_system(setup_ui_camera)
+
 		.run();
 }
 
@@ -316,7 +337,7 @@ fn get_coin(
 				if (player_ent.eq(ent1) && coin_ent.eq(ent2)) || (player_ent.eq(ent2) && coin_ent.eq(ent1)) {
 					xp.0 += 1;
 					text.sections[0] = TextSection {
-							value: String::from("Score: ") + &xp.0.to_string(),
+							value: String::from("Poentaro: ") + &xp.0.to_string(),
 							style: defstyle(&assets),
 							..default()
 						};

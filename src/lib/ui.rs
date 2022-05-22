@@ -8,12 +8,14 @@ pub fn defstyle(asset_server: &Res<AssetServer>) -> TextStyle {
 	}
 }
 
+pub fn setup_ui_camera(mut commands: Commands) {
+	commands.spawn_bundle(UiCameraBundle::default());
+}
+
 pub fn setup_ui(
 	mut commands: Commands, 
 	asset_server: Res<AssetServer>
-) {
-	commands.spawn_bundle(UiCameraBundle::default());
-	
+) {	
 	let ui_bundle = commands.spawn_bundle(NodeBundle {
             style: Style {
                 size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
@@ -52,7 +54,7 @@ pub fn setup_ui(
                                     ..default()
                                 },
                                 text: Text::with_section(
-                                    "Score: 0",
+                                    "Poentaro: 0",
                                     defstyle(&asset_server),
                                     Default::default(),
                                 ),
