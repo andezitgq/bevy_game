@@ -127,6 +127,7 @@ fn main() {
 			present_mode: PresentMode::Mailbox,
 			..default()
 		})
+		.insert_resource(Screen(0.0, 0.0))
 		.insert_resource(Msaa { samples: 4 })
         .insert_resource(AmbientLight {
             color: Color::WHITE,
@@ -166,6 +167,7 @@ fn main() {
         
         .add_system(texture_filtering)
         .add_system(setup_ui_camera)
+        .add_system(screen_size)
 
 		.run();
 }
