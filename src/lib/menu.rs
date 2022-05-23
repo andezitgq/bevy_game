@@ -53,7 +53,7 @@ pub fn main_menu(
 
 	egui_ctx.ctx_mut().set_fonts(fonts);
 	
-	egui::SidePanel::left("side_panel").default_width(200.0).show(egui_ctx.ctx_mut(), |ui| {
+	egui::SidePanel::left("side_panel").default_width(200.0).resizable(false).show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {
 			ui.allocate_space(egui::Vec2::new(0.0, screen.1 / 2.0 - 25.0));
 			ui.heading("Kampludejo");
