@@ -4,17 +4,22 @@ use std::f32::consts::PI as pi;
 use std::ops::Mul;
 use bevy::prelude::*;
 use bevy::window::*;
+use bevy::gltf::{Gltf, GltfExtras};
 use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
 use bevy_egui::EguiPlugin;
 use iyes_loopless::prelude::*;
+use serde_json::Value;
 
 use lib::orbit_camera::*;
 use lib::ui::*;
 use lib::menu::*; 
 
 //Derivo de Komponantoj
+#[derive(Default)]
+struct IsLoaded(bool);
+
 #[derive(Component)]
 struct XP(u16);
 
@@ -128,6 +133,7 @@ fn main() {
 			..default()
 		})
 		.insert_resource(Screen(0.0, 0.0))
+		.insert_resource(IsLoaded(false))
 		.insert_resource(Msaa { samples: 4 })
         .insert_resource(AmbientLight {
             color: Color::WHITE,
@@ -159,6 +165,7 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::InGame)
+                .with_system(spawn_coins)
                 .with_system(control_character)
 				.with_system(pan_orbit_camera)
 				.with_system(get_coin)
@@ -186,17 +193,12 @@ fn setup(
 	//Ludkampo
     commands.spawn()
     .insert(Collider::cuboid(64.0, 0.5, 64.0))
-    .insert(Sensor(true))
+    .insert(Sensor(false))
     .insert(Ground);
     
-    commands.spawn_bundle(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Plane { size: 128.0 })),
-        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, 0.0, 0.0),
-        ..default()
-    })
-    .insert(Collider::cuboid(64.0, 0.1, 64.0))
-    .insert(Ground);
+    let my_gltf = assets.load("scenes/scene1.glb#Scene0");
+    commands.spawn_scene(my_gltf.clone());
+    
     //Lumo
     commands.spawn_bundle(PointLightBundle {
         point_light: PointLight {
@@ -231,34 +233,45 @@ fn setup(
 			..default()
 		},
 	});
-
-	//Moneroj
-	commands.spawn_bundle(CoinBundle {
-		_c: Coin,
-		
-		physics: PhysicsBundle {
-			collider: Collider::cuboid(0.6, 0.2, 0.6),
-			..default()
-		},
-		
-		pbr: PbrBundle {
-			mesh: meshes.add(Mesh::from(shape::Torus {
-				radius: 0.5,
-				ring_radius: 0.1,
-				subdivisions_segments: 16,
-				subdivisions_sides: 16,
-			})),
-			material: materials.add(golden_mat()),
-			transform: Transform {
-				translation: Vec3::new(4.0, 2.0, 4.0),
-				rotation: Quat::from_axis_angle(Vec3::X, radian(0.0)),
-				scale: Vec3::new(1.0, 1.0, 1.0),
-			},
-			..default()
-		},
-	});
-
 }
+
+fn spawn_coins(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    query: Query<(&Transform, &GltfExtras), Added<GltfExtras>>
+) {
+    for (t, gltf_extras) in query.iter() {
+        let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
+		if v["type"].as_str() == Some("coin") {
+			commands.spawn_bundle(CoinBundle {
+				_c: Coin,
+				
+				physics: PhysicsBundle {
+					collider: Collider::cuboid(0.6, 0.2, 0.6),
+					..default()
+				},
+				
+				pbr: PbrBundle {
+					mesh: meshes.add(Mesh::from(shape::Torus {
+						radius: 0.5,
+						ring_radius: 0.1,
+						subdivisions_segments: 16,
+						subdivisions_sides: 16,
+					})),
+					material: materials.add(golden_mat()),
+					transform: Transform {
+						translation: t.translation,
+						rotation: Quat::from_axis_angle(Vec3::X, radian(0.0)),
+						scale: Vec3::new(1.0, 1.0, 1.0),
+					},
+					..default()
+				},
+			});
+		}
+    }
+}
+
 
 fn spawn_camera(mut commands: Commands) {
     let translation = Vec3::new(0.0, 16.0, -16.0);
