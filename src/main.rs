@@ -346,10 +346,11 @@ fn get_coin(
 ){
 	let mut text = q_ui.single_mut();
 	let (player_ent, mut xp, _player) = q_player.single_mut();
-	for (coin_ent, _coin) in q_coin.iter_mut() {
-		for collision_event in collision_events.iter() {
-			if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
-				if (player_ent.eq(ent1) && coin_ent.eq(ent2)) || (player_ent.eq(ent2) && coin_ent.eq(ent1)) {
+	
+	for collision_event in collision_events.iter() {
+		if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
+			for (coin_ent, _coin) in q_coin.iter_mut() {
+				if (&player_ent == ent1 && &coin_ent == ent2) || (&player_ent == ent2 && &coin_ent == ent1) {
 					xp.0 += 1;
 					text.sections[0] = TextSection {
 							value: String::from("Poentaro: ") + &xp.0.to_string(),
