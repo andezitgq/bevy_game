@@ -4,7 +4,7 @@ use std::f32::consts::PI as pi;
 use std::ops::Mul;
 use bevy::prelude::*;
 use bevy::window::*;
-use bevy::gltf::{Gltf, GltfExtras};
+use bevy::gltf::{Gltf, GltfMesh, GltfExtras};
 use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
@@ -18,7 +18,7 @@ use lib::menu::*;
 
 //Derivo de Komponantoj
 #[derive(Default)]
-struct IsLoaded(bool);
+struct ColliderMeshes(Handle<Gltf>);
 
 #[derive(Component)]
 struct XP(u16);
@@ -133,7 +133,6 @@ fn main() {
 			..default()
 		})
 		.insert_resource(Screen(0.0, 0.0))
-		.insert_resource(IsLoaded(false))
 		.insert_resource(Msaa { samples: 4 })
         .insert_resource(AmbientLight {
             color: Color::WHITE,
@@ -165,6 +164,7 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::InGame)
+                .with_system(scene_processing)
                 .with_system(spawn_coins)
                 .with_system(control_character)
 				.with_system(pan_orbit_camera)
@@ -196,8 +196,8 @@ fn setup(
     .insert(Sensor(false))
     .insert(Ground);
     
-    let my_gltf = assets.load("scenes/scene1.glb#Scene0");
-    commands.spawn_scene(my_gltf.clone());
+    let gltf: Handle<Gltf> = assets.load("scenes/scene1.glb");
+    commands.insert_resource(ColliderMeshes(gltf));
     
     //Lumo
     commands.spawn_bundle(PointLightBundle {
@@ -235,12 +235,30 @@ fn setup(
 	});
 }
 
+fn scene_processing(
+	mut commands: Commands,
+	mut ev_assets: EventReader<AssetEvent<Gltf>>,
+	cmeshes: Res<ColliderMeshes>,
+    assets_gltf: Res<Assets<Gltf>>,
+    assets_gltfmesh: Res<Assets<GltfMesh>>
+){
+	for ev in ev_assets.iter() {
+		if let AssetEvent::Created { handle } = ev {
+			let scene = assets_gltf.get(handle).unwrap();
+			
+			if *handle == cmeshes.0 {
+				commands.spawn_scene(scene.scenes[0].clone());
+			}
+		}
+	}
+}
+
 fn spawn_coins(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     query: Query<(&Transform, &GltfExtras), Added<GltfExtras>>
-) {
+){
     for (t, gltf_extras) in query.iter() {
         let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
 		if v["type"].as_str() == Some("coin") {
