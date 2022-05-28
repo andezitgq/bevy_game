@@ -4,7 +4,7 @@ use std::f32::consts::PI as pi;
 use std::ops::Mul;
 use bevy::prelude::*;
 use bevy::window::*;
-use bevy::gltf::{Gltf, GltfMesh, GltfExtras};
+use bevy::gltf::{Gltf, GltfNode, GltfMesh, GltfExtras};
 use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
@@ -18,7 +18,12 @@ use lib::menu::*;
 
 //Derivo de Komponantoj
 #[derive(Default)]
-struct ColliderMeshes(Handle<Gltf>);
+struct GltfMeshes {
+	gltf: Handle<Gltf>,
+	has_col: bool,
+	sensor: bool,
+	ground: bool,
+}
 
 #[derive(Component)]
 struct XP(u16);
@@ -143,7 +148,7 @@ fn main() {
 		.add_plugin(ObjPlugin)
 		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
+        //.add_plugin(RapierDebugRenderPlugin::default())
         
         .add_loopless_state(GameState::MainMenu) 
 
@@ -182,22 +187,20 @@ fn main() {
 fn setup(
 	mut windows: ResMut<Windows>,
 	mut commands: Commands,	
-	mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
 ) {
 	let window = windows.primary_mut();
 	window.set_cursor_lock_mode(true);
 	window.set_cursor_visibility(false);
-	
-	//Ludkampo
-    commands.spawn()
-    .insert(Collider::cuboid(64.0, 0.5, 64.0))
-    .insert(Sensor(false))
-    .insert(Ground);
     
     let gltf: Handle<Gltf> = assets.load("scenes/scene1.glb");
-    commands.insert_resource(ColliderMeshes(gltf));
+    commands.insert_resource(GltfMeshes {						
+		gltf,
+		has_col: true,											
+		sensor: false,	
+		ground: true,										
+	});
     
     //Lumo
     commands.spawn_bundle(PointLightBundle {
@@ -229,7 +232,7 @@ fn setup(
 		pbr: PbrBundle {
 			mesh: assets.load("models/player.obj"),
 			material: materials.add(diffuse_mat("textures/player.jpg", &assets)),
-			transform: Transform::from_xyz(0.0, 4.0, 0.0),
+			transform: Transform::from_xyz(0.0, 5.0, 0.0),
 			..default()
 		},
 	});
@@ -238,35 +241,90 @@ fn setup(
 fn scene_processing(
 	mut commands: Commands,
 	mut er_gltf: EventReader<AssetEvent<Gltf>>,
-	mut er_gltfmesh: EventReader<AssetEvent<GltfMesh>>,
-	cmeshes: Res<ColliderMeshes>,
+	cmeshes: Res<GltfMeshes>,
     assets_gltf: Res<Assets<Gltf>>,
     assets_gltfmesh: Res<Assets<GltfMesh>>,
+    assets_gltfnode: Res<Assets<GltfNode>>,
     assets_mesh: Res<Assets<Mesh>>,
-){
+){	
 	for ev in er_gltf.iter() {
 		if let AssetEvent::Created { handle } = ev {
 			let scene = assets_gltf.get(handle).unwrap();
 			
-			if *handle == cmeshes.0 {
+			if *handle == cmeshes.gltf {
 				commands.spawn_scene(scene.scenes[0].clone());
-				for gltfmesh in scene.meshes.iter() {
-					let gltfmesh = assets_gltfmesh.get(gltfmesh);
-					if let Some(gltfmesh) = gltfmesh {
-						for primitive in gltfmesh.primitives.iter() {
-							let mesh = assets_mesh.get(primitive.mesh.clone());
-							if let Some(mesh) = mesh {
-								if let Some(collider) = Collider::bevy_mesh(&mesh) {
-									commands.spawn()
-									.insert(collider);
+				if cmeshes.has_col == true {
+					for gltfnode in scene.nodes.iter() {
+						let gltfnode = assets_gltfnode.get(gltfnode);
+						if let Some(gltfnode) = gltfnode {
+							let colliders: Vec<(Collider, Transform)> = create_node_colliders(
+																&gltfnode,
+																&assets_gltf,
+																&assets_gltfmesh,
+																&assets_gltfnode,
+																&assets_mesh,
+															);
+							
+							let mut i = 0;
+							while i < colliders.len() {
+								let s = commands.spawn()
+								.insert(colliders[i].0.clone())
+								.insert(colliders[i].1.clone())
+								.insert(Sensor(cmeshes.sensor))
+								.id();
+								
+								if cmeshes.ground == true {
+									commands.entity(s)
+									.insert(Ground);
 								}
+								
+								i += 1;
 							}
 						}
+					}	
+				}
+			}
+		}
+	}
+}
+
+fn create_node_colliders(
+	gltfnode: 			&GltfNode,
+	assets_gltf: 		&Res<Assets<Gltf>>,
+    assets_gltfmesh: 	&Res<Assets<GltfMesh>>,
+    assets_gltfnode: 	&Res<Assets<GltfNode>>,
+    assets_mesh: 		&Res<Assets<Mesh>>,
+	
+) -> Vec<(Collider, Transform)> {
+	
+	let mut cols: Vec<(Collider, Transform)> = Vec::new();
+	
+	if let Some(gltfmesh) = &gltfnode.mesh {
+		let gltfmesh = assets_gltfmesh.get(gltfmesh);
+		if let Some(gltfmesh) = gltfmesh {
+			for primitive in gltfmesh.primitives.iter() {
+				let mesh = assets_mesh.get(primitive.mesh.clone());
+				if let Some(mesh) = mesh {
+					if let Some(collider) = Collider::bevy_mesh(&mesh) {
+						cols.push((collider, gltfnode.transform));
 					}
 				}
 			}
 		}
 	}
+	
+	for children_node in gltfnode.children.iter() {
+		let mut child_cols: Vec<(Collider, Transform)> = create_node_colliders(
+														children_node,
+														assets_gltf,
+														assets_gltfmesh,
+														assets_gltfnode,
+														assets_mesh,
+													);
+		cols.append(&mut child_cols);
+	}
+	
+	return cols;
 }
 
 fn spawn_coins(
