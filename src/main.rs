@@ -237,17 +237,33 @@ fn setup(
 
 fn scene_processing(
 	mut commands: Commands,
-	mut ev_assets: EventReader<AssetEvent<Gltf>>,
+	mut er_gltf: EventReader<AssetEvent<Gltf>>,
+	mut er_gltfmesh: EventReader<AssetEvent<GltfMesh>>,
 	cmeshes: Res<ColliderMeshes>,
     assets_gltf: Res<Assets<Gltf>>,
-    assets_gltfmesh: Res<Assets<GltfMesh>>
+    assets_gltfmesh: Res<Assets<GltfMesh>>,
+    assets_mesh: Res<Assets<Mesh>>,
 ){
-	for ev in ev_assets.iter() {
+	for ev in er_gltf.iter() {
 		if let AssetEvent::Created { handle } = ev {
 			let scene = assets_gltf.get(handle).unwrap();
 			
 			if *handle == cmeshes.0 {
 				commands.spawn_scene(scene.scenes[0].clone());
+				for gltfmesh in scene.meshes.iter() {
+					let gltfmesh = assets_gltfmesh.get(gltfmesh);
+					if let Some(gltfmesh) = gltfmesh {
+						for primitive in gltfmesh.primitives.iter() {
+							let mesh = assets_mesh.get(primitive.mesh.clone());
+							if let Some(mesh) = mesh {
+								if let Some(collider) = Collider::bevy_mesh(&mesh) {
+									commands.spawn()
+									.insert(collider);
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
