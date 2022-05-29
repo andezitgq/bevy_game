@@ -219,18 +219,21 @@ fn setup(
 	mut commands: Commands,	
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
+    level: Option<Res<CurrentLevel>>,
 ) {
 	let window = windows.primary_mut();
 	window.set_cursor_lock_mode(true);
 	window.set_cursor_visibility(false);
     
-    let gltf: Handle<Gltf> = assets.load("scenes/scene1.glb");
-    commands.insert_resource(GltfMeshes {						
-		gltf,
-		has_col: true,											
-		sensor: false,	
-		ground: true,										
-	});
+    if let Some(level) = level {
+		let gltf: Handle<Gltf> = assets.load(&level.0);
+		commands.insert_resource(GltfMeshes {						
+			gltf,
+			has_col: true,											
+			sensor: false,	
+			ground: true,										
+		});
+	}
     
     //Lumo
     commands.spawn_bundle(PointLightBundle {

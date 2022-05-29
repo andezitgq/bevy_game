@@ -11,6 +11,12 @@ pub enum GameState {
     InGame,
 }
 
+#[derive(Default)]
+pub struct CurrentLevel(pub String);
+
+#[derive(Default)]
+pub struct LevelDialog(pub bool);
+
 #[derive(Component)]
 pub struct MainMenu;
 #[derive(Component)]
@@ -43,6 +49,7 @@ pub fn main_menu(
 	mut commands: Commands,
 	mut exit: EventWriter<AppExit>,
 	screen: Res<Screen>,
+	lvl_dialog: Option<Res<LevelDialog>>,
 ){
 	let mut fonts = egui::FontDefinitions::default();
 		
@@ -53,35 +60,39 @@ pub fn main_menu(
 	fonts.families.get_mut(&egui::FontFamily::Monospace).unwrap().push("my_font".to_owned());
 
 	egui_ctx.ctx_mut().set_fonts(fonts);
-	
-	
-	egui::Window::new("Elektu nivelon")
-	.anchor(egui::Align2::CENTER_CENTER, [-0.0, 0.0])
-	.resizable(false)
-	.collapsible(false)
-	.show(egui_ctx.ctx_mut(), |ui| {
-		egui::ScrollArea::vertical()
-		.max_height(100.0)
-		.show(ui, |ui| {
-			ui.with_layout(egui::Layout::top_down_justified(egui::Align::Center), |ui|{
-				ui.add(egui::Button::new("Nivelo 1"));
-				ui.add(egui::Button::new("Nivelo 2"));
-				ui.add(egui::Button::new("Nivelo 3"));
-				ui.add(egui::Button::new("Nivelo 4"));
-				ui.add(egui::Button::new("Nivelo 5"));
-				ui.add(egui::Button::new("Nivelo 6"));
-				ui.add(egui::Button::new("Nivelo 7"));
-				ui.add(egui::Button::new("Nivelo 8"));
+	if let Some(lvl_dialog) = lvl_dialog{
+		if lvl_dialog.0 == true {
+			egui::Window::new("Elektu nivelon")
+			.anchor(egui::Align2::CENTER_CENTER, [-0.0, 0.0])
+			.resizable(false)
+			.collapsible(false)
+			.show(egui_ctx.ctx_mut(), |ui| {
+				egui::ScrollArea::vertical()
+				.max_height(100.0)
+				.show(ui, |ui| {
+					ui.with_layout(egui::Layout::top_down_justified(egui::Align::Center), |ui|{
+						let paths = fs::read_dir("./assets/scenes").unwrap();
+						for path in paths {
+							let path = path.unwrap().path().display().to_string();
+							if path.ends_with(".glb") {
+								if ui.add(egui::Button::new(level_name(&path))).clicked() {	
+									let path = path[9..].to_string();
+									commands.insert_resource(CurrentLevel(path));
+									commands.insert_resource(NextState(GameState::InGame));
+								};
+							}
+						}
+					});
+				});
 			});
-		});
-	});
-	
+		}
+	}
 	egui::SidePanel::left("side_panel").default_width(200.0).resizable(false).show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {
 			ui.allocate_space(egui::Vec2::new(0.0, screen.1 / 2.0 - 25.0));
 			ui.heading("Kampludejo");
 			if ui.add(egui::Button::new("Ludi").frame(false)).clicked() {
-				commands.insert_resource(NextState(GameState::InGame));
+				commands.insert_resource(LevelDialog(true));
 			}
 			
 			if ui.add(egui::Button::new("Eliri").frame(false)).clicked() {
@@ -96,4 +107,21 @@ pub fn main_menu(
             ));
         });
     });
+}
+
+fn level_name(path: &String) -> String {
+	let mut i = path.len();
+	
+	for ch in path.chars().rev() {
+		if ch == '/' {
+			break;
+		}
+		i -= 1;
+	}
+	
+	let mut c = path[i..(path.len() - 4)].chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
 }
