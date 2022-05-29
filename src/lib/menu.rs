@@ -1,3 +1,4 @@
+use std::fs;
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy::app::AppExit;
@@ -52,6 +53,28 @@ pub fn main_menu(
 	fonts.families.get_mut(&egui::FontFamily::Monospace).unwrap().push("my_font".to_owned());
 
 	egui_ctx.ctx_mut().set_fonts(fonts);
+	
+	
+	egui::Window::new("Elektu nivelon")
+	.anchor(egui::Align2::CENTER_CENTER, [-0.0, 0.0])
+	.resizable(false)
+	.collapsible(false)
+	.show(egui_ctx.ctx_mut(), |ui| {
+		egui::ScrollArea::vertical()
+		.max_height(100.0)
+		.show(ui, |ui| {
+			ui.with_layout(egui::Layout::top_down_justified(egui::Align::Center), |ui|{
+				ui.add(egui::Button::new("Nivelo 1"));
+				ui.add(egui::Button::new("Nivelo 2"));
+				ui.add(egui::Button::new("Nivelo 3"));
+				ui.add(egui::Button::new("Nivelo 4"));
+				ui.add(egui::Button::new("Nivelo 5"));
+				ui.add(egui::Button::new("Nivelo 6"));
+				ui.add(egui::Button::new("Nivelo 7"));
+				ui.add(egui::Button::new("Nivelo 8"));
+			});
+		});
+	});
 	
 	egui::SidePanel::left("side_panel").default_width(200.0).resizable(false).show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {

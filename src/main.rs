@@ -152,6 +152,7 @@ fn main() {
         
         .add_loopless_state(GameState::MainMenu) 
 
+		.add_enter_system(GameState::MainMenu, menu_bg)
         .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
         
         .add_enter_system(GameState::InGame, setup)
@@ -182,6 +183,35 @@ fn main() {
         .add_system(screen_size)
 
 		.run();
+}
+
+fn menu_bg(
+	mut commands: Commands,
+	assets: Res<AssetServer>,
+){
+	let scene = assets.load("scenes/menu/menu.glb#Scene0");
+	commands.spawn()
+	.insert(MainMenu)
+	.with_children(|parent| {
+        parent.spawn_scene(scene);
+    });
+	
+	commands.spawn_bundle(PointLightBundle {
+        point_light: PointLight {
+            intensity: 3000.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        ..default()
+    })
+    .insert(MainMenu);
+    
+    commands.spawn_bundle(PerspectiveCameraBundle {
+		transform: Transform::from_xyz(-24.0, 12.0, -24.0).looking_at(Vec3::ZERO, Vec3::Y),
+		..default()
+	})
+	.insert(MainMenu);
 }
 
 fn setup(
