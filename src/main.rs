@@ -9,12 +9,17 @@ use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
 use bevy_egui::EguiPlugin;
+use bevy_discord_presence::{
+    config::{RPCConfig, RPCPlugin},
+    state::ActivityState,
+};
 use iyes_loopless::prelude::*;
 use serde_json::Value;
 
 use lib::orbit_camera::*;
 use lib::ui::*;
 use lib::menu::*; 
+use lib::token::*;
 
 //Derivo de Komponantoj
 #[derive(Default)]
@@ -145,10 +150,14 @@ fn main() {
         })
         
 		.add_plugins(DefaultPlugins)
+		//.add_plugin(RPCPlugin(RPCConfig{
+		//	app_id: token(),
+		//	show_time: true,
+		//}))
 		.add_plugin(ObjPlugin)
 		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        //.add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(RapierDebugRenderPlugin::default())
         
         .add_loopless_state(GameState::MainMenu) 
 
@@ -181,8 +190,17 @@ fn main() {
         .add_system(texture_filtering)
         .add_system(setup_ui_camera)
         .add_system(screen_size)
+        //.add_system(update_presence)
 
 		.run();
+}
+
+fn update_presence(
+	mut state: ResMut<ActivityState>,
+){
+	state.instance = Some(true);
+    state.details = Some("Hello World".to_string());
+    state.state = Some("This is state".to_string());
 }
 
 fn menu_bg(

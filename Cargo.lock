@@ -438,6 +438,7 @@ dependencies = [
  "bevy_egui",
  "bevy_obj",
  "bevy_rapier3d",
+ "discord-presence",
  "iyes_loopless",
  "serde_json",
 ]

@@ -1,5 +1,6 @@
-# Kampludejo
-Ĉi tio estas mia unua testa ludo, kreita en Bevy-ludmotoro per rustlingvo.
+# KAMPLUD'
+![kamplud'_header](header.png)
+Ĉi tio estas esperantlingva testa 3D-saltludo, kreita en Bevy-ludmotoro per rustlingvo.
 
 Ĝi estas malfermfonta kaj estas disvastigata je la Apache-permesilo.
 
@@ -21,3 +22,4 @@
 - [ ] Eniri la menuon el la `InGame`
 - [ ] Muziko
 - [ ] Krei ĉefmenuan scenon
+- [ ] `Discord Rich Presence` ([#3](https://github.com/jewlexx/discord-presence/issues/3))

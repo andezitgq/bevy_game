@@ -3,6 +3,10 @@ use bevy::prelude::*;
 use bevy::window::*;
 use bevy::app::AppExit;
 use bevy_egui::{egui, EguiContext};
+use bevy_discord_presence::{
+    config::{RPCConfig, RPCPlugin},
+    state::ActivityState,
+};
 use iyes_loopless::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -90,7 +94,7 @@ pub fn main_menu(
 	egui::SidePanel::left("side_panel").default_width(200.0).resizable(false).show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {
 			ui.allocate_space(egui::Vec2::new(0.0, screen.1 / 2.0 - 25.0));
-			ui.heading("Kampludejo");
+			ui.heading("Kamplud'");
 			if ui.add(egui::Button::new("Ludi").frame(false)).clicked() {
 				commands.insert_resource(LevelDialog(true));
 			}
