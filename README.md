@@ -15,6 +15,7 @@
 - [ ] `KillTrigger` scena komponanto
 - [ ] Realigi ludan `Health` komponanton
 - [x] Ripari saltadon de ludanto
+- [ ] Limigi kameraan turnadon
 - [ ] `InGame` uzanta interfaco
 
 ### Pliaj
@@ -24,3 +25,6 @@
 - [ ] Muziko
 - [ ] Krei ĉefmenuan scenon
 - [ ] `Discord Rich Presence` ([#3](https://github.com/jewlexx/discord-presence/issues/3))
+
+### Refari
+- [x] Repripensi GLTF-kunpuŝiĝilan sistemon (parenco-ido)
