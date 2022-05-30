@@ -14,7 +14,7 @@
 - [ ] `Finish` scena komponanto
 - [ ] `KillTrigger` scena komponanto
 - [ ] Realigi ludan `Health` komponanton
-- [ ] Ripari saltadon de ludanto
+- [x] Ripari saltadon de ludanto
 - [ ] `InGame` uzanta interfaco
 
 ### Pliaj

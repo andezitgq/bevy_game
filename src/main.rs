@@ -43,6 +43,9 @@ struct Health(u8);
 struct Player;
 
 #[derive(Component)]
+struct PlayerChild;
+
+#[derive(Component)]
 struct IsGround(bool);
 
 #[derive(Component)]
@@ -157,7 +160,7 @@ fn main() {
 		.add_plugin(ObjPlugin)
 		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
+        //.add_plugin(RapierDebugRenderPlugin::default())
         
         .add_loopless_state(GameState::MainMenu) 
 
@@ -277,6 +280,8 @@ fn setup(
 			
 			restitution: Restitution::coefficient(0.7),
 			dominance: Dominance::group(2),
+			act: ActiveCollisionTypes::empty(),
+			events: ActiveEvents::empty(),
 			..default()
 		},
 		
@@ -286,7 +291,15 @@ fn setup(
 			transform: Transform::from_xyz(0.0, 5.0, 0.0),
 			..default()
 		},
-	});
+	})
+	.with_children(|parent| {
+        parent.spawn()
+        .insert(Sensor(true))
+        .insert(Collider::ball(1.1f32))
+		.insert(Restitution::default())
+		.insert(Friction::default())
+        .insert(PlayerChild);
+    });
 }
 
 fn scene_processing(
@@ -322,6 +335,9 @@ fn scene_processing(
 								.insert(colliders[i].0.clone())
 								.insert(colliders[i].1.clone())
 								.insert(Sensor(cmeshes.sensor))
+								.insert(Ccd::enabled())
+								.insert(ActiveCollisionTypes::default())
+								.insert(ActiveEvents::COLLISION_EVENTS)
 								.id();
 								
 								if cmeshes.ground == true {
@@ -433,23 +449,28 @@ fn spawn_camera(mut commands: Commands) {
 fn control_character(
 	keys: Res<Input<KeyCode>>,
 	mut camera_query: Query<(&mut PanOrbitCamera, &Transform), Without<Player>>,
-	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, Entity, &mut IsGround, &Player)>,
+	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, &mut IsGround, &Player)>,
+	mut pl_child_q: Query<(&PlayerChild, Entity)>,
 	mut ground_query: Query<(Entity, &Ground)>,
 	mut collision_events: EventReader<CollisionEvent>,
 ){	
-	let (_health, transform, mut _player_force, mut _player_impulse, player_ent, mut is_ground, _player) = player_query.single_mut();
+	let (_health, transform, mut _player_force, mut _player_impulse, mut is_ground, _player) = player_query.single_mut();
 	let (mut poc, camera_transform) = camera_query.single_mut();
+	let (_pc, player_child) = pl_child_q.single_mut();
 	
-	for (ground_ent, _ground) in ground_query.iter_mut() {
-		for collision_event in collision_events.iter() {
-			if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
-				if (ground_ent.eq(ent1) && player_ent.eq(ent2)) || (ground_ent.eq(ent2) && player_ent.eq(ent1)) {
+	
+	for collision_event in collision_events.iter() {
+		if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
+			for (ground_ent, _ground) in ground_query.iter_mut() {
+				if (ground_ent.eq(ent1) && player_child.eq(ent2)) || (ground_ent.eq(ent2) && player_child.eq(ent1)) {
 					is_ground.0 = true;
 				}
 			}
-			
-			if let CollisionEvent::Stopped(ent1, ent2, _flags) = collision_event {
-				if (ground_ent.eq(ent1) && player_ent.eq(ent2)) || (ground_ent.eq(ent2) && player_ent.eq(ent1)) {
+		}
+		
+		if let CollisionEvent::Stopped(ent1, ent2, _flags) = collision_event {
+			for (ground_ent, _ground) in ground_query.iter_mut() {
+				if (ground_ent.eq(ent1) && player_child.eq(ent2)) || (ground_ent.eq(ent2) && player_child.eq(ent1)) {
 					is_ground.0 = false;
 				}
 			}
@@ -464,17 +485,17 @@ fn control_character(
 								  (transform.translation.z - ct0.z) / 16.0);
 	let perp_vector = Quat::from_axis_angle(Vec3::Y, radian(90.0)).mul(direct_vector);
 	
-	if keys.pressed(KeyCode::W) { _player_impulse.impulse = direct_vector;}
-	if keys.pressed(KeyCode::S) { _player_impulse.impulse = -direct_vector;}
-	if keys.pressed(KeyCode::A) { _player_impulse.impulse = perp_vector;}
-	if keys.pressed(KeyCode::D) { _player_impulse.impulse = -perp_vector;}
+	if keys.pressed(KeyCode::W) { _player_impulse.impulse = direct_vector * 2.0;}
+	if keys.pressed(KeyCode::S) { _player_impulse.impulse = -direct_vector * 2.0;}
+	if keys.pressed(KeyCode::A) { _player_impulse.impulse = perp_vector * 2.0;}
+	if keys.pressed(KeyCode::D) { _player_impulse.impulse = -perp_vector * 2.0;}
 	
-	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::A) { _player_impulse.impulse = direct_vector + perp_vector;}
-	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::A) { _player_impulse.impulse = perp_vector - direct_vector;}
-	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::D) { _player_impulse.impulse = direct_vector - perp_vector;}
-	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::D) { _player_impulse.impulse =-direct_vector - perp_vector;}
+	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::A) { _player_impulse.impulse = (direct_vector + perp_vector) * 2.0;}
+	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::A) { _player_impulse.impulse = (perp_vector - direct_vector) * 2.0;}
+	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::D) { _player_impulse.impulse = (direct_vector - perp_vector) * 2.0;}
+	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::D) { _player_impulse.impulse =(-direct_vector - perp_vector) * 2.0;}
        
-    if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 25.0, 0.0);}
+    if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 50.0, 0.0);}
         
     poc.focus = transform.translation;
 }
