@@ -23,12 +23,7 @@ use lib::token::*;
 
 //Derivo de Komponantoj
 #[derive(Default)]
-struct GltfMeshes {
-	gltf: Handle<Gltf>,
-	has_col: bool,
-	sensor: bool,
-	ground: bool,
-}
+struct GltfMeshes (Handle<Gltf>);
 
 #[derive(Default)]
 struct LoadedMeshes(Vec<Handle<Mesh>>);
@@ -254,12 +249,7 @@ fn setup(
     
     if let Some(level) = level {
 		let gltf: Handle<Gltf> = assets.load(&level.0);
-		commands.insert_resource(GltfMeshes {						
-			gltf,
-			has_col: true,											
-			sensor: false,	
-			ground: true,										
-		});
+		commands.insert_resource(GltfMeshes(gltf));
 	}
     
     //Lumo
@@ -311,19 +301,17 @@ fn setup(
 fn scene_processing(
 	mut commands: Commands,
 	mut er_gltf: EventReader<AssetEvent<Gltf>>,
-	mut materials: ResMut<Assets<StandardMaterial>>,
 	cmeshes: Res<GltfMeshes>,
     assets_gltf: Res<Assets<Gltf>>,
     assets_gltfmesh: Res<Assets<GltfMesh>>,
     assets_gltfnode: Res<Assets<GltfNode>>,
-    assets_mesh: Res<Assets<Mesh>>,
 ){	
 	for ev in er_gltf.iter() {
 		if let AssetEvent::Created { handle } = ev {
 			let scene = assets_gltf.get(handle).unwrap();
 			let mut meshes: Vec<Handle<Mesh>> = Vec::new();
 			
-			if *handle == cmeshes.gltf {
+			if *handle == cmeshes.0 {
 				commands.spawn_scene(scene.scenes[0].clone());
 				for gltfnode in scene.nodes.iter() {
 					let gltfnode = assets_gltfnode.get(gltfnode);
@@ -335,7 +323,6 @@ fn scene_processing(
 				}					
 			}
 			
-			println!("{}", meshes.len());
 			commands.insert_resource(LoadedMeshes(meshes));
 		}
 	}
@@ -369,7 +356,7 @@ fn control_extras(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut assets_mesh: ResMut<Assets<Mesh>>,
-    q_parent: Query<(Entity, &Transform, &GltfExtras)>,
+    q_parent: Query<(Entity, &Transform, &GltfExtras), Added<GltfExtras>>,
     q_child: Query<(&Parent, Entity, &Handle<Mesh>), Added<Handle<Mesh>>>,
     loaded_meshes: Option<Res<LoadedMeshes>>,
 ){	
@@ -379,7 +366,7 @@ fn control_extras(
 				if loaded_mesh == mesh {
 					if let Some(mesh) = assets_mesh.get(mesh) {
 						if let Some(collider) = Collider::bevy_mesh(mesh) {
-							for (exent, t, gltf_extras) in q_parent.iter() {
+							for (exent, _t, gltf_extras) in q_parent.iter() {
 								if exent == parent.0 {
 									let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
 									if v["collider"].as_str() == Some("true") {
@@ -392,6 +379,14 @@ fn control_extras(
 										commands.entity(parent.0)
 										.insert(Sensor(true))
 										.insert(FinishTrigger);
+										
+										commands.entity(ent)
+										.remove::<Handle<Mesh>>();
+									}
+									
+									if v["type"].as_str() == Some("ground") {
+										commands.entity(parent.0)
+										.insert(Ground);
 									}
 								}
 							}
@@ -402,7 +397,7 @@ fn control_extras(
 		}
 	}
 	
-	/*for (t, gltf_extras) in q_parent.iter() {
+	for (_exent, t, gltf_extras) in q_parent.iter() {
 		let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
 		if v["type"].as_str() == Some("coin") {
 			commands.spawn_bundle(CoinBundle {
@@ -429,17 +424,8 @@ fn control_extras(
 					..default()
 				},
 			});
-		} /*else if v["type"].as_str() == Some("finish") {
-			commands.entity(ent)
-			.remove::<Sensor>()
-			.insert(RigidBody::Dynamic)
-			.insert(Transform::from_xyz(0.0, 5.0, 0.0))
-			.insert(Sensor(false))
-			.insert(FinishTrigger);
-			//println!("Finish is found!");
-		}*/
-	}*/
-			
+		}
+	}	
 }
 
 fn spawn_camera(mut commands: Commands) {
