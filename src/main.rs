@@ -369,7 +369,7 @@ fn control_extras(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut assets_mesh: ResMut<Assets<Mesh>>,
-    q_parent: Query<(&Transform, &GltfExtras)>,
+    q_parent: Query<(Entity, &Transform, &GltfExtras)>,
     q_child: Query<(&Parent, Entity, &Handle<Mesh>), Added<Handle<Mesh>>>,
     loaded_meshes: Option<Res<LoadedMeshes>>,
 ){	
@@ -379,9 +379,22 @@ fn control_extras(
 				if loaded_mesh == mesh {
 					if let Some(mesh) = assets_mesh.get(mesh) {
 						if let Some(collider) = Collider::bevy_mesh(mesh) {
-							commands.entity(parent.0)
-							.insert(collider)
-							.insert(Sensor(false));
+							for (exent, t, gltf_extras) in q_parent.iter() {
+								if exent == parent.0 {
+									let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
+									if v["collider"].as_str() == Some("true") {
+										commands.entity(parent.0)
+										.insert(Sensor(false))
+										.insert(collider.clone());
+									}
+									
+									if v["type"].as_str() == Some("finish") {
+										commands.entity(parent.0)
+										.insert(Sensor(true))
+										.insert(FinishTrigger);
+									}
+								}
+							}
 						}
 					}
 				}
@@ -389,7 +402,7 @@ fn control_extras(
 		}
 	}
 	
-	for (t, gltf_extras) in q_parent.iter() {
+	/*for (t, gltf_extras) in q_parent.iter() {
 		let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
 		if v["type"].as_str() == Some("coin") {
 			commands.spawn_bundle(CoinBundle {
@@ -425,7 +438,7 @@ fn control_extras(
 			.insert(FinishTrigger);
 			//println!("Finish is found!");
 		}*/
-	}
+	}*/
 			
 }
 
