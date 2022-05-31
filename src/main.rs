@@ -294,7 +294,7 @@ fn setup(
 		pbr: PbrBundle {
 			mesh: assets.load("models/player.obj"),
 			material: materials.add(diffuse_mat("textures/player.jpg", &assets)),
-			transform: Transform::from_xyz(0.0, 100.0, 0.0),
+			transform: Transform::from_xyz(0.0, 10.0, 0.0),
 			..default()
 		},
 	})
@@ -328,11 +328,15 @@ fn scene_processing(
 				for gltfnode in scene.nodes.iter() {
 					let gltfnode = assets_gltfnode.get(gltfnode);
 					if let Some(gltfnode) = gltfnode {
-						commands.insert_resource(mesh_event(&gltfnode, &assets_gltf, &assets_gltfmesh));
+						let mut x: Vec<Handle<Mesh>> = mesh_event(&gltfnode, &assets_gltf, &assets_gltfmesh);
+						meshes.append(&mut x);
 					}
 					
 				}					
 			}
+			
+			println!("{}", meshes.len());
+			commands.insert_resource(LoadedMeshes(meshes));
 		}
 	}
 }
@@ -341,7 +345,7 @@ fn mesh_event(
 	gltfnode: 			&GltfNode,
 	assets_gltf: 		&Res<Assets<Gltf>>,
     assets_gltfmesh: 	&Res<Assets<GltfMesh>>,
-) -> Vec<Handle<Mesh>>{
+) -> Vec<Handle<Mesh>> {
 	let mut ms: Vec<Handle<Mesh>> = Vec::new();
 	
 	if let Some(gltfmesh) = &gltfnode.mesh {
@@ -364,55 +368,65 @@ fn mesh_event(
 fn control_extras(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    assets_gltfmesh: Res<Assets<Mesh>>,
+    mut assets_mesh: ResMut<Assets<Mesh>>,
     q_parent: Query<(&Transform, &GltfExtras)>,
     q_child: Query<(&Parent, Entity, &Handle<Mesh>), Added<Handle<Mesh>>>,
     loaded_meshes: Option<Res<LoadedMeshes>>,
 ){	
-	//if let Some(loaded_meshes) = loaded_meshes {
+	if let Some(loaded_meshes) = loaded_meshes {
 		for (parent, ent, mesh) in q_child.iter() {
-			println!("Fisuĉu, sklavoj!");
+			for loaded_mesh in loaded_meshes.0.iter() {
+				if loaded_mesh == mesh {
+					if let Some(mesh) = assets_mesh.get(mesh) {
+						if let Some(collider) = Collider::bevy_mesh(mesh) {
+							commands.entity(parent.0)
+							.insert(collider)
+							.insert(Sensor(false));
+						}
+					}
+				}
+			}
 		}
-	//}
+	}
 	
-	/*if loaded_meshes.is_added() {
-		println!("Hello world!");
-	}*/
-			/*let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
-			if v["type"].as_str() == Some("coin") {
-				commands.spawn_bundle(CoinBundle {
-					_c: Coin,
-					
-					physics: PhysicsBundle {
-						collider: Collider::cuboid(0.6, 0.2, 0.6),
-						..default()
+	for (t, gltf_extras) in q_parent.iter() {
+		let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
+		if v["type"].as_str() == Some("coin") {
+			commands.spawn_bundle(CoinBundle {
+				_c: Coin,
+				
+				physics: PhysicsBundle {
+					collider: Collider::cuboid(0.6, 0.2, 0.6),
+					..default()
+				},
+				
+				pbr: PbrBundle {
+					mesh: assets_mesh.add(Mesh::from(shape::Torus {
+						radius: 0.5,
+						ring_radius: 0.1,
+						subdivisions_segments: 16,
+						subdivisions_sides: 16,
+					})),
+					material: materials.add(golden_mat()),
+					transform: Transform {
+						translation: t.translation,
+						rotation: Quat::from_axis_angle(Vec3::X, radian(0.0)),
+						scale: Vec3::new(1.0, 1.0, 1.0),
 					},
-					
-					pbr: PbrBundle {
-						mesh: meshes.add(Mesh::from(shape::Torus {
-							radius: 0.5,
-							ring_radius: 0.1,
-							subdivisions_segments: 16,
-							subdivisions_sides: 16,
-						})),
-						material: materials.add(golden_mat()),
-						transform: Transform {
-							translation: t.translation,
-							rotation: Quat::from_axis_angle(Vec3::X, radian(0.0)),
-							scale: Vec3::new(1.0, 1.0, 1.0),
-						},
-						..default()
-					},
-				});
-			} else if v["type"].as_str() == Some("finish") {
-				commands.entity(ent)
-				.remove::<Sensor>()
-				.insert(RigidBody::Dynamic)
-				.insert(Transform::from_xyz(0.0, 5.0, 0.0))
-				.insert(Sensor(false))
-				.insert(FinishTrigger);
-				//println!("Finish is found!");
-			}*/
+					..default()
+				},
+			});
+		} /*else if v["type"].as_str() == Some("finish") {
+			commands.entity(ent)
+			.remove::<Sensor>()
+			.insert(RigidBody::Dynamic)
+			.insert(Transform::from_xyz(0.0, 5.0, 0.0))
+			.insert(Sensor(false))
+			.insert(FinishTrigger);
+			//println!("Finish is found!");
+		}*/
+	}
+			
 }
 
 fn spawn_camera(mut commands: Commands) {
