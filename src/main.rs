@@ -154,10 +154,10 @@ fn main() {
         })
         
 		.add_plugins(DefaultPlugins)
-		//.add_plugin(RPCPlugin(RPCConfig{
-		//	app_id: token(),
-		//	show_time: true,
-		//}))
+		/*.add_plugin(RPCPlugin(RPCConfig{
+			app_id: token(),
+			show_time: true,
+		}))*/
 		.add_plugin(ObjPlugin)
 		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())

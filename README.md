@@ -24,7 +24,7 @@
 - [ ] Eniri la menuon el la `InGame` stato
 - [ ] Muziko
 - [ ] Krei ĉefmenuan scenon
-- [x] `Discord Rich Presence` (realigebla, sed maldevancas/"lagging") ([#3](https://github.com/jewlexx/discord-presence/issues/3))
+- [x] `Discord Rich Presence` (realigebla, sed haltigas la ludon) ([#3](https://github.com/jewlexx/discord-presence/issues/3))
 
 ### Refari
 - [x] Repripensi GLTF-kunpuŝiĝilan sistemon (parenco-ido)
