@@ -11,7 +11,7 @@
 - [x] Orbita kamerao
 - [x] Ĉefmenuo 
 - [x] `Coin` scena komponanto
-- [ ] `Finish` scena komponanto
+- [x] `Finish` scena komponanto
 - [ ] `KillTrigger` scena komponanto
 - [ ] Realigi ludan `Health` komponanton
 - [x] Ripari saltadon de ludanto
@@ -21,10 +21,11 @@
 ### Pliaj
 - [ ] Krei ĉefajn ludajn nivelojn
 - [ ] Interscena ŝargilo
-- [ ] Eniri la menuon el la `InGame`
+- [ ] Eniri la menuon el la `InGame` stato
 - [ ] Muziko
 - [ ] Krei ĉefmenuan scenon
-- [ ] `Discord Rich Presence` ([#3](https://github.com/jewlexx/discord-presence/issues/3))
+- [x] `Discord Rich Presence` (realigebla, sed maldevancas/"lagging") ([#3](https://github.com/jewlexx/discord-presence/issues/3))
 
 ### Refari
 - [x] Repripensi GLTF-kunpuŝiĝilan sistemon (parenco-ido)
+- [x] Unuigi `Handle<Mesh>`, `Collider` and `GltfExtras` komponantojn

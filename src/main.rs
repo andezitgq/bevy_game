@@ -284,7 +284,7 @@ fn setup(
 		pbr: PbrBundle {
 			mesh: assets.load("models/player.obj"),
 			material: materials.add(diffuse_mat("textures/player.jpg", &assets)),
-			transform: Transform::from_xyz(0.0, 10.0, 0.0),
+			transform: Transform::from_xyz(-5.0, 0.0, 0.0),
 			..default()
 		},
 	})
@@ -372,7 +372,10 @@ fn control_extras(
 									if v["collider"].as_str() == Some("true") {
 										commands.entity(parent.0)
 										.insert(Sensor(false))
-										.insert(collider.clone());
+										.insert(collider.clone())
+										.insert(Ccd::enabled())
+										.insert(ActiveCollisionTypes::default())
+										.insert(ActiveEvents::COLLISION_EVENTS);
 									}
 									
 									if v["type"].as_str() == Some("finish") {
@@ -443,29 +446,36 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn control_character(
+	mut commands: Commands,
 	keys: Res<Input<KeyCode>>,
 	mut camera_query: Query<(&mut PanOrbitCamera, &Transform), Without<Player>>,
-	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, &mut IsGround, &Player)>,
-	mut pl_child_q: Query<(&PlayerChild, Entity)>,
-	mut ground_query: Query<(Entity, &Ground)>,
+	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, &mut IsGround), With<Player>>,
+	pl_child_query: Query<Entity, With<PlayerChild>>,
+	finish_query: Query<Entity, With<FinishTrigger>>,
+	ground_query: Query<Entity, With<Ground>>,
 	mut collision_events: EventReader<CollisionEvent>,
 ){	
-	let (_health, transform, mut _player_force, mut _player_impulse, mut is_ground, _player) = player_query.single_mut();
+	let (_health, transform, mut _player_force, mut _player_impulse, mut is_ground) = player_query.single_mut();
 	let (mut poc, camera_transform) = camera_query.single_mut();
-	let (_pc, player_child) = pl_child_q.single_mut();
-	
+	let player_child = pl_child_query.single();
 	
 	for collision_event in collision_events.iter() {
 		if let CollisionEvent::Started(ent1, ent2, _flags) = collision_event {
-			for (ground_ent, _ground) in ground_query.iter_mut() {
+			for ground_ent in ground_query.iter() {
 				if (ground_ent.eq(ent1) && player_child.eq(ent2)) || (ground_ent.eq(ent2) && player_child.eq(ent1)) {
 					is_ground.0 = true;
+				}
+			}
+			
+			for finish_ent in finish_query.iter() {
+				if (finish_ent.eq(ent1) && player_child.eq(ent2)) || (finish_ent.eq(ent2) && player_child.eq(ent1)) {
+					println!("Vi ekvenkis!");
 				}
 			}
 		}
 		
 		if let CollisionEvent::Stopped(ent1, ent2, _flags) = collision_event {
-			for (ground_ent, _ground) in ground_query.iter_mut() {
+			for ground_ent in ground_query.iter() {
 				if (ground_ent.eq(ent1) && player_child.eq(ent2)) || (ground_ent.eq(ent2) && player_child.eq(ent1)) {
 					is_ground.0 = false;
 				}
