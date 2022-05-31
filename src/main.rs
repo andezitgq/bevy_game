@@ -16,11 +16,6 @@ use bevy_discord_presence::{
 use iyes_loopless::prelude::*;
 use serde_json::Value;
 
-use bevy::ecs::archetype::Archetypes;
-use bevy::ecs::component::Components;
-use bevy::ecs::component::ComponentId;
-use std::ops::Deref;
-
 use lib::orbit_camera::*;
 use lib::ui::*;
 use lib::menu::*; 
@@ -34,6 +29,9 @@ struct GltfMeshes {
 	sensor: bool,
 	ground: bool,
 }
+
+#[derive(Default)]
+struct LoadedMeshes(Vec<Handle<Mesh>>);
 
 #[derive(Component)]
 struct XP(u16);
@@ -296,7 +294,7 @@ fn setup(
 		pbr: PbrBundle {
 			mesh: assets.load("models/player.obj"),
 			material: materials.add(diffuse_mat("textures/player.jpg", &assets)),
-			transform: Transform::from_xyz(0.0, 5.0, 0.0),
+			transform: Transform::from_xyz(0.0, 100.0, 0.0),
 			..default()
 		},
 	})
@@ -323,118 +321,64 @@ fn scene_processing(
 	for ev in er_gltf.iter() {
 		if let AssetEvent::Created { handle } = ev {
 			let scene = assets_gltf.get(handle).unwrap();
+			let mut meshes: Vec<Handle<Mesh>> = Vec::new();
 			
 			if *handle == cmeshes.gltf {
 				commands.spawn_scene(scene.scenes[0].clone());
-				/*if cmeshes.has_col == true {
-					for gltfnode in scene.nodes.iter() {
-						let gltfnode = assets_gltfnode.get(gltfnode);
-						if let Some(gltfnode) = gltfnode {
-							let colliders: Vec<(Collider, 
-												Transform, 
-												Handle<Mesh>, 
-												Option<Handle<StandardMaterial>>)> = 
-															create_node_colliders(
-																&gltfnode,
-																&assets_gltf,
-																&assets_gltfmesh,
-																&assets_gltfnode,
-																&assets_mesh,
-															);
-							
-							let mut i = 0;
-							while i < colliders.len() {
-								let s = commands.spawn_bundle(PbrBundle {
-									mesh: colliders[i].2.clone(),
-									material: match &colliders[i].3 {
-										None => materials.add(StandardMaterial::default()),
-										Some(material) => material.clone(),
-									},
-									transform: colliders[i].1.clone(),
-									..default()
-								})
-								.insert(colliders[i].0.clone())
-								.insert(Sensor(cmeshes.sensor))
-								.insert(Ccd::enabled())
-								.insert(ActiveCollisionTypes::default())
-								.insert(ActiveEvents::COLLISION_EVENTS)
-								.id();
-								
-								if cmeshes.ground == true {
-									commands.entity(s)
-									.insert(Ground);
-								}
-								
-								i += 1;
-							}
-						}
-					}	
-				}*/
+				for gltfnode in scene.nodes.iter() {
+					let gltfnode = assets_gltfnode.get(gltfnode);
+					if let Some(gltfnode) = gltfnode {
+						commands.insert_resource(mesh_event(&gltfnode, &assets_gltf, &assets_gltfmesh));
+					}
+					
+				}					
 			}
 		}
 	}
 }
 
-fn create_node_colliders(
+fn mesh_event(
 	gltfnode: 			&GltfNode,
 	assets_gltf: 		&Res<Assets<Gltf>>,
     assets_gltfmesh: 	&Res<Assets<GltfMesh>>,
-    assets_gltfnode: 	&Res<Assets<GltfNode>>,
-    assets_mesh: 		&Res<Assets<Mesh>>,
-	
-) -> Vec<(Collider, Transform, Handle<Mesh>, Option<Handle<StandardMaterial>>)> {
-	
-	let mut cols: Vec<(Collider, Transform, Handle<Mesh>, Option<Handle<StandardMaterial>>)> = Vec::new();
+) -> Vec<Handle<Mesh>>{
+	let mut ms: Vec<Handle<Mesh>> = Vec::new();
 	
 	if let Some(gltfmesh) = &gltfnode.mesh {
 		let gltfmesh = assets_gltfmesh.get(gltfmesh);
 		if let Some(gltfmesh) = gltfmesh {
 			for primitive in gltfmesh.primitives.iter() {
-				let mesh = assets_mesh.get(primitive.mesh.clone());
-				if let Some(mesh) = mesh {
-					if let Some(collider) = Collider::bevy_mesh(&mesh) {
-						cols.push((collider, gltfnode.transform, primitive.mesh.clone(), primitive.material.clone()));
-					}
-				}
+				let mesh = primitive.mesh.clone();
+				ms.push(mesh);
 			}
 		}
 	}
 	
 	for children_node in gltfnode.children.iter() {
-		let mut child_cols: Vec<(Collider, Transform, Handle<Mesh>, Option<Handle<StandardMaterial>>)> = create_node_colliders(
-														children_node,
-														assets_gltf,
-														assets_gltfmesh,
-														assets_gltfnode,
-														assets_mesh,
-													);
-		cols.append(&mut child_cols);
+		ms.append(&mut mesh_event(children_node, assets_gltf, assets_gltfmesh))
 	}
 	
-	return cols;
+	return ms;
 }
 
 fn control_extras(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    q_parent: Query<(&Children, &Transform, &GltfExtras), Added<GltfExtras>>,
-    q_child: Query<(Entity, &Handle<Mesh>)>,
-    archetypes: &Archetypes, 
-    components: &Components,
-){
-    for (child, t, gltf_extras) in q_parent.iter() {
-		println!("Mesh found!!!");
-		for(ent, mesh) in q_child.iter(){
-			if ent == *child.deref().split_first().unwrap().0 {
-				println!("Child-mesh found!!!");
-			} else {
-				println!("Non-mesh found!!!");
-			}
-		
-		
-			/*println!("{:?}", ent);
-			let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
+    assets_gltfmesh: Res<Assets<Mesh>>,
+    q_parent: Query<(&Transform, &GltfExtras)>,
+    q_child: Query<(&Parent, Entity, &Handle<Mesh>), Added<Handle<Mesh>>>,
+    loaded_meshes: Option<Res<LoadedMeshes>>,
+){	
+	//if let Some(loaded_meshes) = loaded_meshes {
+		for (parent, ent, mesh) in q_child.iter() {
+			println!("Fisuĉu, sklavoj!");
+		}
+	//}
+	
+	/*if loaded_meshes.is_added() {
+		println!("Hello world!");
+	}*/
+			/*let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
 			if v["type"].as_str() == Some("coin") {
 				commands.spawn_bundle(CoinBundle {
 					_c: Coin,
@@ -469,16 +413,7 @@ fn control_extras(
 				.insert(FinishTrigger);
 				//println!("Finish is found!");
 			}*/
-						
-			/*for comp_id in get_components_for_entity(child.deref().split_first().unwrap().0, archetypes).unwrap() {
-				if let Some(comp_info) = components.get_info(comp_id) {
-					println!("Component: {:?}", comp_info);
-				}
-			}*/
-		}
-    }
 }
-
 
 fn spawn_camera(mut commands: Commands) {
     let translation = Vec3::new(0.0, 16.0, -16.0);
@@ -624,16 +559,4 @@ fn _print_type<T>(_: &T) {
 
 fn radian(deg: f32) -> f32 {
 	return deg * pi / 180.0; 
-}
-
-pub fn get_components_for_entity<'a>(
-    entity: &Entity,
-    archetypes: &'a Archetypes,
-) -> Option<impl Iterator<Item = ComponentId> + 'a> {
-    for archetype in archetypes.iter() {
-        if archetype.entities().contains(entity) {
-            return Some(archetype.components());
-        }
-    }
-    None
 }
