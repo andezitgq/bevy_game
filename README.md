@@ -12,7 +12,7 @@
 - [x] Ĉefmenuo 
 - [x] `Coin` scena komponanto
 - [x] `Finish` scena komponanto
-- [x] `DamageTrigger` scena komponanto
+- [x] `DamageTrigger` scena komponanto (ludo kraŝas enigante ian ajn kunpuŝiĝilon kun alta rapideco) ([#184](https://github.com/dimforge/bevy_rapier/issues/184))
 - [ ] Realigi ludan `Health` komponanton
 - [x] Ripari saltadon de ludanto
 - [ ] Limigi kameraan turnadon
@@ -25,7 +25,7 @@
 - [ ] Eniri la menuon el la `InGame` stato
 - [ ] Muziko
 - [ ] Krei ĉefmenuan scenon
-- [x] `Discord Rich Presence` (realigebla, sed haltigas la ludon) ([#3](https://github.com/jewlexx/discord-presence/issues/3))
+- [x] `Discord Rich Presence` (realigebla, sed haltigas la ludon sen lanĉita Diskordo) ([#3](https://github.com/jewlexx/discord-presence/issues/3))
 
 ### Refari
 - [x] Repripensi GLTF-kunpuŝiĝilan sistemon (parenco-ido)

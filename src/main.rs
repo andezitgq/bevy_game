@@ -369,7 +369,7 @@ fn control_extras(
 			for loaded_mesh in loaded_meshes.0.iter() {
 				if loaded_mesh == mesh {
 					if let Some(mesh) = assets_mesh.get(mesh) {
-						if let Some(collider) = Collider::bevy_mesh(mesh) {
+						if let Some(collider) = Collider::from_bevy_mesh(mesh, &ComputedColliderShape::TriMesh) {
 							for (exent, _t, gltf_extras) in q_parent.iter() {
 								if exent == parent.0 {
 									let v: Value = serde_json::from_str(&gltf_extras.value).expect("Couldn't parse GltfExtra value as JSON");
