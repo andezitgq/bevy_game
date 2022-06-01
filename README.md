@@ -12,11 +12,12 @@
 - [x] Ĉefmenuo 
 - [x] `Coin` scena komponanto
 - [x] `Finish` scena komponanto
-- [ ] `KillTrigger` scena komponanto
+- [x] `DamageTrigger` scena komponanto
 - [ ] Realigi ludan `Health` komponanton
 - [x] Ripari saltadon de ludanto
 - [ ] Limigi kameraan turnadon
-- [ ] `InGame` uzanta interfaco
+- [x] `InGame` uzanta interfaco
+- [ ] `GameOver` kaj `Win` statoj
 
 ### Pliaj
 - [ ] Krei ĉefajn ludajn nivelojn

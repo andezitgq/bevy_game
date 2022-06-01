@@ -48,12 +48,8 @@ pub fn screen_size(
 	}
 }
 
-pub fn main_menu(
+pub fn setup_font(
 	mut egui_ctx: ResMut<EguiContext>,
-	mut commands: Commands,
-	mut exit: EventWriter<AppExit>,
-	screen: Res<Screen>,
-	lvl_dialog: Option<Res<LevelDialog>>,
 ){
 	let mut fonts = egui::FontDefinitions::default();
 		
@@ -64,6 +60,15 @@ pub fn main_menu(
 	fonts.families.get_mut(&egui::FontFamily::Monospace).unwrap().push("my_font".to_owned());
 
 	egui_ctx.ctx_mut().set_fonts(fonts);
+}
+
+pub fn main_menu(
+	mut commands: Commands,
+	mut egui_ctx: ResMut<EguiContext>,
+	mut exit: EventWriter<AppExit>,
+	screen: Res<Screen>,
+	lvl_dialog: Option<Res<LevelDialog>>,
+){
 	if let Some(lvl_dialog) = lvl_dialog{
 		if lvl_dialog.0 == true {
 			egui::Window::new("Elektu nivelon")

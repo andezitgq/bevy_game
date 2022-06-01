@@ -29,22 +29,22 @@ struct GltfMeshes (Handle<Gltf>);
 struct LoadedMeshes(Vec<Handle<Mesh>>);
 
 #[derive(Component)]
-struct XP(u16);
+pub struct XP(u16);
 
 #[derive(Component)]
 struct PlayerName(String);
 
 #[derive(Component)]
-struct Health(u8);
-
-#[derive(Component)]
-struct Player;
-
-#[derive(Component)]
-struct PlayerChild;
+pub struct Health(u8);
 
 #[derive(Component)]
 struct IsGround(bool);
+
+#[derive(Component)]
+pub struct Player;
+
+#[derive(Component)]
+struct PlayerChild;
 
 #[derive(Component)]
 struct Ground;
@@ -54,6 +54,9 @@ struct Coin;
 
 #[derive(Component)]
 struct FinishTrigger;
+
+#[derive(Component)]
+struct DamageTrigger;
 
 #[derive(Bundle)]
 struct PhysicsBundle {
@@ -166,11 +169,11 @@ fn main() {
         .add_loopless_state(GameState::MainMenu) 
 
 		.add_enter_system(GameState::MainMenu, menu_bg)
+		.add_enter_system(GameState::MainMenu, setup_font)
         .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
         
         .add_enter_system(GameState::InGame, setup)
         .add_enter_system(GameState::InGame, spawn_camera)
-        .add_enter_system(GameState::InGame, setup_ui)
         .add_exit_system(GameState::InGame, despawn_with::<InGame>)
         
         .add_system_set(
@@ -188,6 +191,7 @@ fn main() {
                 .with_system(control_character)
 				.with_system(pan_orbit_camera)
 				.with_system(get_coin)
+				.with_system(setup_ui)
                 .into()
         )
         
@@ -266,7 +270,7 @@ fn setup(
 	commands.spawn_bundle(PlayerBundle {
 		xp: XP(0),
 		name: PlayerName(String::from("Player123")),
-		health: Health(100),
+		health: Health(3),
 		_p: Player,
 		
 		physics: PhysicsBundle {
@@ -391,6 +395,15 @@ fn control_extras(
 										commands.entity(parent.0)
 										.insert(Ground);
 									}
+									
+									if v["type"].as_str() == Some("damage") {
+										commands.entity(parent.0)
+										.insert(Sensor(true))
+										.insert(DamageTrigger);
+										
+										commands.entity(ent)
+										.remove::<Handle<Mesh>>();
+									}
 								}
 							}
 						}
@@ -446,16 +459,16 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn control_character(
-	mut commands: Commands,
 	keys: Res<Input<KeyCode>>,
 	mut camera_query: Query<(&mut PanOrbitCamera, &Transform), Without<Player>>,
-	mut player_query: Query<(&Health, &Transform, &mut ExternalForce, &mut ExternalImpulse, &mut IsGround), With<Player>>,
+	mut player_query: Query<(&mut Health, &mut Transform, &mut ExternalForce, &mut ExternalImpulse, &mut IsGround), With<Player>>,
 	pl_child_query: Query<Entity, With<PlayerChild>>,
 	finish_query: Query<Entity, With<FinishTrigger>>,
 	ground_query: Query<Entity, With<Ground>>,
+	damage_query: Query<Entity, With<DamageTrigger>>,
 	mut collision_events: EventReader<CollisionEvent>,
 ){	
-	let (_health, transform, mut _player_force, mut _player_impulse, mut is_ground) = player_query.single_mut();
+	let (mut health, mut transform, mut _player_force, mut _player_impulse, mut is_ground) = player_query.single_mut();
 	let (mut poc, camera_transform) = camera_query.single_mut();
 	let player_child = pl_child_query.single();
 	
@@ -472,12 +485,24 @@ fn control_character(
 					println!("Vi ekvenkis!");
 				}
 			}
+			
+			for damage_ent in damage_query.iter() {
+				if (damage_ent.eq(ent1) && player_child.eq(ent2)) || (damage_ent.eq(ent2) && player_child.eq(ent1)) {
+					//
+				}
+			}
 		}
 		
 		if let CollisionEvent::Stopped(ent1, ent2, _flags) = collision_event {
 			for ground_ent in ground_query.iter() {
 				if (ground_ent.eq(ent1) && player_child.eq(ent2)) || (ground_ent.eq(ent2) && player_child.eq(ent1)) {
 					is_ground.0 = false;
+				}
+			}
+			
+			for damage_ent in damage_query.iter() {
+				if (damage_ent.eq(ent1) && player_child.eq(ent2)) || (damage_ent.eq(ent2) && player_child.eq(ent1)) {
+					//
 				}
 			}
 		}
@@ -500,21 +525,18 @@ fn control_character(
 	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::A) { _player_impulse.impulse = (perp_vector - direct_vector) * 2.0;}
 	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::D) { _player_impulse.impulse = (direct_vector - perp_vector) * 2.0;}
 	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::D) { _player_impulse.impulse =(-direct_vector - perp_vector) * 2.0;}
-       
-    if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 50.0, 0.0);}
-        
-    poc.focus = transform.translation;
+	   
+	if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 50.0, 0.0);}
+		
+	poc.focus = transform.translation;
 }
 
 fn get_coin(
 	mut commands: Commands,
 	mut q_player: Query<(Entity, &mut XP, &Player)>,
 	mut q_coin: Query<(Entity, &Coin)>,
-	mut q_ui: Query<&mut Text>,
 	mut collision_events: EventReader<CollisionEvent>,
-	assets: Res<AssetServer>,
 ){
-	let mut text = q_ui.single_mut();
 	let (player_ent, mut xp, _player) = q_player.single_mut();
 	
 	for collision_event in collision_events.iter() {
@@ -522,11 +544,6 @@ fn get_coin(
 			for (coin_ent, _coin) in q_coin.iter_mut() {
 				if (&player_ent == ent1 && &coin_ent == ent2) || (&player_ent == ent2 && &coin_ent == ent1) {
 					xp.0 += 1;
-					text.sections[0] = TextSection {
-							value: String::from("Poentaro: ") + &xp.0.to_string(),
-							style: defstyle(&assets),
-							..default()
-						};
 					commands.entity(coin_ent).despawn();
 				}
 			}

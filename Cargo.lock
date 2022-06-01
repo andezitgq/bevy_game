@@ -228,12 +228,12 @@ dependencies = [
 
 [[package]]
 name = "bevy-discord-presence"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "967e98c5368a2aa47fca749f9bc772b91fc63fd0bf72a71761a69ce7452b3276"
+version = "0.3.0"
+source = "git+https://github.com/jewlexx/discord-presence?branch=fix/unix#a92b0c07a07b6abb8c4ee015657717d01a5c90ca"
 dependencies = [
  "bevy",
  "discord-presence",
+ "parking_lot 0.12.0",
 ]
 
 [[package]]
