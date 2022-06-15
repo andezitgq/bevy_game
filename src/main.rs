@@ -2,6 +2,7 @@ pub mod lib;
 
 use std::f32::consts::PI as pi;
 use std::ops::Mul;
+use std::cmp;
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy::gltf::{Gltf, GltfNode, GltfMesh, GltfExtras};
@@ -280,8 +281,9 @@ fn setup(
 			
 			restitution: Restitution::coefficient(0.7),
 			dominance: Dominance::group(2),
-			act: ActiveCollisionTypes::empty(),
-			events: ActiveEvents::empty(),
+			act: ActiveCollisionTypes::all(),
+			events: ActiveEvents::COLLISION_EVENTS,
+			ccd: Ccd::enabled(),
 			..default()
 		},
 		
@@ -298,6 +300,9 @@ fn setup(
         .insert(Collider::ball(1.1f32))
 		.insert(Restitution::default())
 		.insert(Friction::default())
+		.insert(ActiveCollisionTypes::all())
+		.insert(ActiveEvents::COLLISION_EVENTS)
+		.insert(Ccd::enabled())
         .insert(PlayerChild);
     });
 }
@@ -461,14 +466,14 @@ fn spawn_camera(mut commands: Commands) {
 fn control_character(
 	keys: Res<Input<KeyCode>>,
 	mut camera_query: Query<(&mut PanOrbitCamera, &Transform), Without<Player>>,
-	mut player_query: Query<(&mut Health, &mut Transform, &mut ExternalForce, &mut ExternalImpulse, &mut IsGround), With<Player>>,
+	mut player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut ExternalImpulse, &mut IsGround), With<Player>>,
 	pl_child_query: Query<Entity, With<PlayerChild>>,
 	finish_query: Query<Entity, With<FinishTrigger>>,
 	ground_query: Query<Entity, With<Ground>>,
 	damage_query: Query<Entity, With<DamageTrigger>>,
 	mut collision_events: EventReader<CollisionEvent>,
 ){	
-	let (mut health, mut transform, mut _player_force, mut _player_impulse, mut is_ground) = player_query.single_mut();
+	let (mut health, mut transform, mut _player_velocity, mut _player_impulse, mut is_ground) = player_query.single_mut();
 	let (mut poc, camera_transform) = camera_query.single_mut();
 	let player_child = pl_child_query.single();
 	
@@ -488,7 +493,9 @@ fn control_character(
 			
 			for damage_ent in damage_query.iter() {
 				if (damage_ent.eq(ent1) && player_child.eq(ent2)) || (damage_ent.eq(ent2) && player_child.eq(ent1)) {
-					//
+					println!("Ok");
+					transform.translation = Vec3::new(-5.0, 0.0, 0.0);
+					_player_velocity.linvel = Vec3::ZERO;
 				}
 			}
 		}
@@ -527,6 +534,10 @@ fn control_character(
 	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::D) { _player_impulse.impulse =(-direct_vector - perp_vector) * 2.0;}
 	   
 	if keys.just_pressed(KeyCode::Space) && is_ground.0 == true { _player_impulse.impulse = Vec3::new(0.0, 50.0, 0.0);}
+	
+	_player_velocity.linvel = Vec3::new(_player_velocity.linvel.x.clamp(-20.0, 20.0),
+										_player_velocity.linvel.y,
+										_player_velocity.linvel.z.clamp(-20.0, 20.0));
 		
 	poc.focus = transform.translation;
 }
