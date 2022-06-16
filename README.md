@@ -12,12 +12,13 @@
 - [x] Ĉefmenuo 
 - [x] `Coin` scena komponanto
 - [x] `Finish` scena komponanto
-- [x] `DamageTrigger` scena komponanto (ludo kraŝas enigante ian ajn kunpuŝiĝilon kun alta rapideco) ([#184](https://github.com/dimforge/bevy_rapier/issues/184))
+- [x] `DamageTrigger` scena komponanto ~~(ludo kraŝas enigante ian ajn kunpuŝiĝilon kun alta rapideco) ([#184](https://github.com/dimforge/bevy_rapier/issues/184))~~
 - [ ] Realigi ludan `Health` komponanton
 - [x] Ripari saltadon de ludanto
 - [ ] Limigi kameraan turnadon
 - [x] `InGame` uzanta interfaco
 - [ ] `GameOver` kaj `Win` statoj
+- [ ] Realigi multludantaron kaj poentarojn
 
 ### Pliaj
 - [ ] Krei ĉefajn ludajn nivelojn

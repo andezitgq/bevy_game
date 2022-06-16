@@ -19,6 +19,9 @@ pub enum GameState {
 pub struct CurrentLevel(pub String);
 
 #[derive(Default)]
+pub struct Pause(pub bool);
+
+#[derive(Default)]
 pub struct LevelDialog(pub bool);
 
 #[derive(Component)]

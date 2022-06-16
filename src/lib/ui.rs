@@ -2,11 +2,11 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContext};
 use bevy_rapier3d::prelude::*;
 
-use crate::lib::menu::Screen;
-use crate::{XP, Player, Health};
+use crate::lib::menu::{Screen, MainMenu, InGame};
+use crate::lib::components::{XP, Player, Health};
 
 pub fn setup_ui_camera(mut commands: Commands) {
-	commands.spawn_bundle(UiCameraBundle::default());
+	commands.spawn_bundle(UiCameraBundle::default()).insert(InGame);
 }
 
 pub fn setup_ui(

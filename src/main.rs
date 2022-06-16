@@ -3,6 +3,12 @@ pub mod lib;
 use std::f32::consts::PI as pi;
 use std::ops::Mul;
 use std::cmp;
+
+use serde_derive::Deserialize;
+use std::fs;
+use std::process::exit;
+use toml;
+
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy::gltf::{Gltf, GltfNode, GltfMesh, GltfExtras};
@@ -21,122 +27,7 @@ use lib::orbit_camera::*;
 use lib::ui::*;
 use lib::menu::*; 
 use lib::token::*;
-
-//Derivo de Komponantoj
-#[derive(Default)]
-struct GltfMeshes (Handle<Gltf>);
-
-#[derive(Default)]
-struct LoadedMeshes(Vec<Handle<Mesh>>);
-
-#[derive(Component)]
-pub struct XP(u16);
-
-#[derive(Component)]
-struct PlayerName(String);
-
-#[derive(Component)]
-pub struct Health(u8);
-
-#[derive(Component)]
-struct IsGround(bool);
-
-#[derive(Component)]
-pub struct Player;
-
-#[derive(Component)]
-struct PlayerChild;
-
-#[derive(Component)]
-struct Ground;
-
-#[derive(Component)]
-struct Coin;
-
-#[derive(Component)]
-struct FinishTrigger;
-
-#[derive(Component)]
-struct DamageTrigger;
-
-#[derive(Bundle)]
-struct PhysicsBundle {
-	rigidbody: RigidBody,
-	collider: Collider,
-	sensor: Sensor,
-	friction: Friction,
-	restitution: Restitution,
-	is_ground: IsGround,
-	
-	velocity: Velocity,
-	gravity: GravityScale,
-	mass_properties: MassProperties,
-	locked_axes: LockedAxes,
-	dominance: Dominance,
-	sleeping: Sleeping,
-	damping: Damping,
-	ccd: Ccd,
-	act: ActiveCollisionTypes,
-	events: ActiveEvents,
-	
-	force: ExternalForce,
-	impulse: ExternalImpulse,
-}
-
-impl Default for PhysicsBundle {
-	fn default() -> PhysicsBundle {
-		return PhysicsBundle {
-			rigidbody: RigidBody::Fixed,
-			collider: Collider::cuboid(1.0, 1.0, 1.0),
-			restitution: Restitution::default(),
-			sensor: Sensor(true),
-			friction: Friction::default(),
-			is_ground: IsGround(false),
-			
-			gravity: GravityScale(1.0),
-			velocity: Velocity {
-				linvel: Vec3::new(0.0, 0.0, 0.0),
-				angvel: Vec3::new(0.0, 0.0, 0.0),
-			},
-			mass_properties: MassProperties::default(),
-			locked_axes: LockedAxes::default(),
-			damping: Damping::default(),
-			dominance: Dominance::group(0),
-			sleeping: Sleeping::disabled(),
-			ccd: Ccd::enabled(),
-			act: ActiveCollisionTypes::default(),
-			events: ActiveEvents::COLLISION_EVENTS,
-			
-			force: ExternalForce::default(),
-			impulse: ExternalImpulse::default(),
-		}
-	}
-}
-
-#[derive(Bundle)]
-struct PlayerBundle {
-    xp: XP,
-    name: PlayerName,
-    health: Health,
-    _p: Player,
-	
-	#[bundle]
-	physics: PhysicsBundle,
-    
-    #[bundle]
-    pbr: PbrBundle,
-}
-
-#[derive(Bundle)]
-struct CoinBundle {
-	_c: Coin,
-	
-	#[bundle]
-	physics: PhysicsBundle,
-	
-	#[bundle]
-	pbr: PbrBundle,
-}
+use lib::components::*;
 
 fn main() {
 	App::new()
@@ -151,6 +42,7 @@ fn main() {
 			..default()
 		})
 		.insert_resource(Screen(0.0, 0.0))
+		.insert_resource(Pause(false))
 		.insert_resource(Msaa { samples: 4 })
         .insert_resource(AmbientLight {
             color: Color::WHITE,
@@ -189,10 +81,18 @@ fn main() {
                 .run_in_state(GameState::InGame)
                 .with_system(scene_processing)
                 .with_system(control_extras)
+				.with_system(setup_ui)
+				.with_system(pause)
+                .into()
+        )
+        
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::InGame)
+                .run_if_not(is_pause)
                 .with_system(control_character)
 				.with_system(pan_orbit_camera)
 				.with_system(get_coin)
-				.with_system(setup_ui)
                 .into()
         )
         
@@ -204,12 +104,34 @@ fn main() {
 		.run();
 }
 
+fn is_pause(pause: Res<Pause>) -> bool {return pause.0;}
+
 fn update_presence(
 	mut state: ResMut<ActivityState>,
 ){
 	state.instance = Some(true);
     state.details = Some("Hello World".to_string());
     state.state = Some("This is state".to_string());
+}
+
+fn pause(
+	keys: Res<Input<KeyCode>>,
+	mut commands: Commands,
+	mut is_pause: ResMut<Pause>,
+	mut ents: Query<Entity, With<Dynamics>>,
+){
+	if keys.just_pressed(KeyCode::Escape) {
+		is_pause.0 = !is_pause.0;
+		if is_pause.0 {
+			for ent in ents.iter_mut() {
+				commands.entity(ent).insert(RigidBody::Fixed);  //NOT FREEZES YET!!!
+			}
+		} else {
+			for ent in ents.iter_mut() {
+				commands.entity(ent).insert(RigidBody::Dynamic);
+			}
+		}
+	}
 }
 
 fn menu_bg(
@@ -266,7 +188,7 @@ fn setup(
         },
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
-    });
+    }).insert(InGame);
 	//Ludanto
 	commands.spawn_bundle(PlayerBundle {
 		xp: XP(0),
@@ -294,6 +216,7 @@ fn setup(
 			..default()
 		},
 	})
+	.insert(InGame)
 	.with_children(|parent| {
         parent.spawn()
         .insert(Sensor(true))
@@ -384,7 +307,8 @@ fn control_extras(
 										.insert(collider.clone())
 										.insert(Ccd::enabled())
 										.insert(ActiveCollisionTypes::default())
-										.insert(ActiveEvents::COLLISION_EVENTS);
+										.insert(ActiveEvents::COLLISION_EVENTS)
+										.insert(InGame);
 									}
 									
 									if v["type"].as_str() == Some("finish") {
@@ -444,7 +368,7 @@ fn control_extras(
 					},
 					..default()
 				},
-			});
+			}).insert(InGame);
 		}
 	}	
 }
@@ -460,7 +384,7 @@ fn spawn_camera(mut commands: Commands) {
     }).insert(PanOrbitCamera {
         radius,
         ..Default::default()
-    });
+    }).insert(InGame);
 }
 
 fn control_character(
