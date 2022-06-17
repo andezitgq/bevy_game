@@ -29,9 +29,6 @@ pub struct IsGround(pub bool);
 pub struct Player;
 
 #[derive(Component)]
-pub struct Dynamics;
-
-#[derive(Component)]
 pub struct PlayerChild;
 
 #[derive(Component)]

@@ -32,7 +32,7 @@ use lib::components::*;
 fn main() {
 	App::new()
 		.insert_resource(WindowDescriptor{
-			title: "Kampludejo".to_string(),
+			title: "Kamplud'".to_string(),
 			resizable: true,
 			decorations: false,
 			mode: WindowMode::BorderlessFullscreen,
@@ -118,18 +118,16 @@ fn pause(
 	keys: Res<Input<KeyCode>>,
 	mut commands: Commands,
 	mut is_pause: ResMut<Pause>,
-	mut ents: Query<Entity, With<Dynamics>>,
+	mut rapier_config: ResMut<RapierConfiguration>,
 ){
 	if keys.just_pressed(KeyCode::Escape) {
 		is_pause.0 = !is_pause.0;
 		if is_pause.0 {
-			for ent in ents.iter_mut() {
-				commands.entity(ent).insert(RigidBody::Fixed);  //NOT FREEZES YET!!!
-			}
+			rapier_config.physics_pipeline_active = false;
+			rapier_config.query_pipeline_active = false;
 		} else {
-			for ent in ents.iter_mut() {
-				commands.entity(ent).insert(RigidBody::Dynamic);
-			}
+			rapier_config.physics_pipeline_active = true;
+			rapier_config.query_pipeline_active = true;
 		}
 	}
 }

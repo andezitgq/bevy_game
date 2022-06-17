@@ -18,12 +18,12 @@
 - [ ] Limigi kameraan turnadon
 - [x] `InGame` uzanta interfaco
 - [ ] `GameOver` kaj `Win` statoj
-- [ ] Realigi multludantaron kaj poentarojn
+- [ ] Realigi multludantaron kaj poentarojn (toml)
 
 ### Pliaj
 - [ ] Krei ĉefajn ludajn nivelojn
 - [ ] Interscena ŝargilo
-- [ ] Eniri la menuon el la `InGame` stato
+- [x] Paŭzo-menuo
 - [ ] Muziko
 - [ ] Krei ĉefmenuan scenon
 - [x] `Discord Rich Presence` (realigebla, sed haltigas la ludon sen lanĉita Diskordo) ([#3](https://github.com/jewlexx/discord-presence/issues/3))
