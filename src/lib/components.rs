@@ -4,6 +4,30 @@ use bevy::gltf::{Gltf, GltfNode, GltfMesh, GltfExtras};
 use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_rapier3d::prelude::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GameState {
+    MainMenu,
+    InGame,
+}
+
+#[derive(Default)]
+pub struct CurrentLevel(pub String);
+
+#[derive(Default, PartialEq, Clone)]
+pub struct Pause(pub bool);
+
+#[derive(Default)]
+pub struct LevelDialog(pub bool);
+
+#[derive(Component)]
+pub struct MainMenu;
+
+#[derive(Component)]
+pub struct InGame;
+
+#[derive(Default)]
+pub struct Screen(pub f32, pub f32);
+
 #[derive(Default)]
 pub struct GltfMeshes (pub Handle<Gltf>);
 

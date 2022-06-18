@@ -2,35 +2,14 @@ use std::fs;
 use bevy::prelude::*;
 use bevy::window::*;
 use bevy::app::AppExit;
+use bevy_rapier3d::prelude::*;
 use bevy_egui::{egui, EguiContext};
 use bevy_discord_presence::{
     config::{RPCConfig, RPCPlugin},
     state::ActivityState,
 };
 use iyes_loopless::prelude::*;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum GameState {
-    MainMenu,
-    InGame,
-}
-
-#[derive(Default)]
-pub struct CurrentLevel(pub String);
-
-#[derive(Default)]
-pub struct Pause(pub bool);
-
-#[derive(Default)]
-pub struct LevelDialog(pub bool);
-
-#[derive(Component)]
-pub struct MainMenu;
-#[derive(Component)]
-pub struct InGame;
-
-#[derive(Default)]
-pub struct Screen(pub f32, pub f32);
+use crate::lib::components::*;
 
 pub fn despawn_with<T: Component>(
 	mut commands: Commands, 
@@ -108,6 +87,45 @@ pub fn main_menu(
 			}
 			
 			if ui.add(egui::Button::new("Eliri").frame(false)).clicked() {
+				exit.send(AppExit);
+			}
+        });
+        
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::Center), |ui| {
+            ui.add(egui::Hyperlink::from_label_and_url(
+                "farita de linuksulo",
+                "https://github.com/andezitgq/",
+            ));
+        });
+    });
+}
+
+pub fn pause_menu(
+	mut commands: Commands,
+	mut egui_ctx: ResMut<EguiContext>,
+	mut rapier_config: ResMut<RapierConfiguration>,
+	mut exit: EventWriter<AppExit>,
+	screen: Res<Screen>,
+){
+	egui::SidePanel::left("side_panel").default_width(200.0).resizable(false).show(egui_ctx.ctx_mut(), |ui| {
+        ui.vertical_centered(|ui| {
+			ui.allocate_space(egui::Vec2::new(0.0, screen.1 / 2.0 - 25.0));
+			ui.heading("Kamplud'");
+			if ui.add(egui::Button::new("Ludi").frame(false)).clicked() {
+				commands.insert_resource(LevelDialog(true));
+			}
+			
+			if ui.add(egui::Button::new("Eliri al menuo").frame(false)).clicked() {
+				commands.insert_resource(NextState(GameState::MainMenu));
+				commands.insert_resource(Pause(false));
+				rapier_config.physics_pipeline_active = true;
+				rapier_config.query_pipeline_active = true;
+				commands.remove_resource::<CurrentLevel>();
+				commands.remove_resource::<LoadedMeshes>();
+				commands.remove_resource::<GltfMeshes>();
+			}
+			
+			if ui.add(egui::Button::new("Eliri al OS").frame(false)).clicked() {
 				exit.send(AppExit);
 			}
         });

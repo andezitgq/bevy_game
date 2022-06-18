@@ -1,5 +1,5 @@
 [package]
-name = "bevy_game"
+name = "kamplud"
 version = "0.0.1"
 edition = "2021"
 
@@ -15,8 +15,7 @@ serde_derive = "1.0.137"
 toml = "0.5.9"
 
 [dependencies.bevy-discord-presence]
-git = "https://github.com/jewlexx/discord-presence"
-branch = "fix/unix"
+path = "libs/bevy-discord-rpc"
 
 [profile.dev]
 opt-level = 1

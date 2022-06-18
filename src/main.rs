@@ -50,10 +50,10 @@ fn main() {
         })
         
 		.add_plugins(DefaultPlugins)
-		/*.add_plugin(RPCPlugin(RPCConfig{
+		.add_plugin(RPCPlugin(RPCConfig{
 			app_id: token(),
 			show_time: true,
-		}))*/
+		}))
 		.add_plugin(ObjPlugin)
 		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
@@ -81,7 +81,6 @@ fn main() {
                 .run_in_state(GameState::InGame)
                 .with_system(scene_processing)
                 .with_system(control_extras)
-				.with_system(setup_ui)
 				.with_system(pause)
                 .into()
         )
@@ -89,22 +88,29 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::InGame)
-                .run_if_not(is_pause)
+                .run_if_resource_equals::<Pause>(Pause(false))
                 .with_system(control_character)
 				.with_system(pan_orbit_camera)
 				.with_system(get_coin)
+				.with_system(setup_ui)
+                .into()
+        )
+        
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::InGame)
+                .run_if_resource_equals::<Pause>(Pause(true))
+                .with_system(pause_menu)
                 .into()
         )
         
         .add_system(texture_filtering)
         .add_system(setup_ui_camera)
         .add_system(screen_size)
-        //.add_system(update_presence)
+        .add_startup_system(update_presence)
 
 		.run();
 }
-
-fn is_pause(pause: Res<Pause>) -> bool {return pause.0;}
 
 fn update_presence(
 	mut state: ResMut<ActivityState>,
@@ -116,18 +122,24 @@ fn update_presence(
 
 fn pause(
 	keys: Res<Input<KeyCode>>,
+	mut windows: ResMut<Windows>,
 	mut commands: Commands,
 	mut is_pause: ResMut<Pause>,
 	mut rapier_config: ResMut<RapierConfiguration>,
 ){
+	let window = windows.primary_mut();
 	if keys.just_pressed(KeyCode::Escape) {
 		is_pause.0 = !is_pause.0;
 		if is_pause.0 {
 			rapier_config.physics_pipeline_active = false;
 			rapier_config.query_pipeline_active = false;
+			window.set_cursor_lock_mode(false);
+			window.set_cursor_visibility(true);
 		} else {
 			rapier_config.physics_pipeline_active = true;
 			rapier_config.query_pipeline_active = true;
+			window.set_cursor_lock_mode(true);
+			window.set_cursor_visibility(false);
 		}
 	}
 }
@@ -167,7 +179,7 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
     level: Option<Res<CurrentLevel>>,
-) {
+){
 	let window = windows.primary_mut();
 	window.set_cursor_lock_mode(true);
 	window.set_cursor_visibility(false);
@@ -187,6 +199,7 @@ fn setup(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     }).insert(InGame);
+	
 	//Ludanto
 	commands.spawn_bundle(PlayerBundle {
 		xp: XP(0),
