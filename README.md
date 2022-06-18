@@ -26,7 +26,7 @@
 - [x] Paŭzo-menuo
 - [ ] Muziko
 - [ ] Krei ĉefmenuan scenon
-- [x] `Discord Rich Presence` (realigebla, sed haltigas la ludon sen lanĉita Diskordo) ([#3](https://github.com/jewlexx/discord-presence/issues/3))
+- [x] `Discord Rich Presence` (permana kompilado, ĉar oficiala `crate` kaŭzas aferon [#3](https://github.com/jewlexx/discord-presence/issues/3))
 
 ### Refari
 - [x] Repripensi GLTF-kunpuŝiĝilan sistemon (parenco-ido)
