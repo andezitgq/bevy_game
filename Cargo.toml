@@ -17,6 +17,9 @@ toml = "0.5.9"
 [dependencies.bevy-discord-presence]
 path = "libs/bevy-discord-rpc"
 
+[dependencies.discord-presence]
+path = "libs/discord-presence"
+
 [profile.dev]
 opt-level = 1
 

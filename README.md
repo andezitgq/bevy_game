@@ -18,7 +18,7 @@
 - [ ] Limigi kameraan turnadon
 - [x] `InGame` uzanta interfaco
 - [ ] `GameOver` kaj `Win` statoj
-- [ ] Realigi multludantaron kaj poentarojn (toml)
+- [ ] Realigi poentaron (toml) + RPC
 
 ### Pliaj
 - [ ] Krei ĉefajn ludajn nivelojn

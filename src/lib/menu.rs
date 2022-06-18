@@ -4,10 +4,6 @@ use bevy::window::*;
 use bevy::app::AppExit;
 use bevy_rapier3d::prelude::*;
 use bevy_egui::{egui, EguiContext};
-use bevy_discord_presence::{
-    config::{RPCConfig, RPCPlugin},
-    state::ActivityState,
-};
 use iyes_loopless::prelude::*;
 use crate::lib::components::*;
 

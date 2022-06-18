@@ -1,8 +1,18 @@
 use bevy::prelude::*;
-use bevy::window::*;
-use bevy::gltf::{Gltf, GltfNode, GltfMesh, GltfExtras};
-use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
+use bevy::gltf::Gltf;
 use bevy_rapier3d::prelude::*;
+use serde_derive::Deserialize;
+
+
+#[derive(Deserialize)]
+pub struct PlayerTOML {
+    pub playerinfo: PlayerInfo,
+}
+
+#[derive(Deserialize)]
+pub struct PlayerInfo {
+	pub score: usize,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -39,9 +49,6 @@ pub struct LoadedMeshes(pub Vec<Handle<Mesh>>);
 
 #[derive(Component)]
 pub struct XP(pub u16);
-
-#[derive(Component)]
-pub struct PlayerName(pub String);
 
 #[derive(Component)]
 pub struct Health(pub u8);
@@ -124,7 +131,6 @@ impl Default for PhysicsBundle {
 #[derive(Bundle)]
 pub struct PlayerBundle {
     pub xp: XP,
-    pub name: PlayerName,
     pub health: Health,
     pub _p: Player,
 	

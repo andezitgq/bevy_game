@@ -11,7 +11,6 @@ pub fn setup_ui_camera(mut commands: Commands) {
 pub fn setup_ui(
 	mut egui_ctx: ResMut<EguiContext>,
 	player: Query<(&XP, &Health, &Velocity), With<Player>>,
-	screen: Res<Screen>,
 ){  
 	let (xp, health, velocity) = player.single();
     egui::TopBottomPanel::top("my_panel")

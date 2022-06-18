@@ -2,12 +2,6 @@ pub mod lib;
 
 use std::f32::consts::PI as pi;
 use std::ops::Mul;
-use std::cmp;
-
-use serde_derive::Deserialize;
-use std::fs;
-use std::process::exit;
-use toml;
 
 use bevy::prelude::*;
 use bevy::window::*;
@@ -18,7 +12,6 @@ use bevy_rapier3d::prelude::*;
 use bevy_egui::EguiPlugin;
 use bevy_discord_presence::{
     config::{RPCConfig, RPCPlugin},
-    state::ActivityState,
 };
 use iyes_loopless::prelude::*;
 use serde_json::Value;
@@ -28,6 +21,7 @@ use lib::ui::*;
 use lib::menu::*; 
 use lib::token::*;
 use lib::components::*;
+use lib::presence::*;
 
 fn main() {
 	App::new()
@@ -62,10 +56,12 @@ fn main() {
         .add_loopless_state(GameState::MainMenu) 
 
 		.add_enter_system(GameState::MainMenu, menu_bg)
+		.add_enter_system(GameState::MainMenu, ds_menu)
 		.add_enter_system(GameState::MainMenu, setup_font)
         .add_exit_system(GameState::MainMenu, despawn_with::<MainMenu>)
         
         .add_enter_system(GameState::InGame, setup)
+        .add_enter_system(GameState::InGame, ds_level)
         .add_enter_system(GameState::InGame, spawn_camera)
         .add_exit_system(GameState::InGame, despawn_with::<InGame>)
         
@@ -107,23 +103,13 @@ fn main() {
         .add_system(texture_filtering)
         .add_system(setup_ui_camera)
         .add_system(screen_size)
-        .add_startup_system(update_presence)
 
 		.run();
-}
-
-fn update_presence(
-	mut state: ResMut<ActivityState>,
-){
-	state.instance = Some(true);
-    state.details = Some("Hello World".to_string());
-    state.state = Some("This is state".to_string());
 }
 
 fn pause(
 	keys: Res<Input<KeyCode>>,
 	mut windows: ResMut<Windows>,
-	mut commands: Commands,
 	mut is_pause: ResMut<Pause>,
 	mut rapier_config: ResMut<RapierConfiguration>,
 ){
@@ -203,7 +189,6 @@ fn setup(
 	//Ludanto
 	commands.spawn_bundle(PlayerBundle {
 		xp: XP(0),
-		name: PlayerName(String::from("Player123")),
 		health: Health(3),
 		_p: Player,
 		
@@ -408,7 +393,7 @@ fn control_character(
 	damage_query: Query<Entity, With<DamageTrigger>>,
 	mut collision_events: EventReader<CollisionEvent>,
 ){	
-	let (mut health, mut transform, mut _player_velocity, mut _player_impulse, mut is_ground) = player_query.single_mut();
+	let (mut _health, mut transform, mut _player_velocity, mut _player_impulse, mut is_ground) = player_query.single_mut();
 	let (mut poc, camera_transform) = camera_query.single_mut();
 	let player_child = pl_child_query.single();
 	
