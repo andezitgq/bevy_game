@@ -63,6 +63,10 @@ pub fn score_get() -> usize{
     return player_toml.playerinfo.score;
 }
 
-pub fn score_set(points: usize){
-	println!("{}", points);
+pub fn score_add(points: usize){
+	let score = format!("[playerinfo]\nscore = {}\n", score_get() + points);
+	let mut file = File::create("assets/player.toml").expect("Maleble krei la dosieron!");
+    if let Err(e) = file.write_all(score.as_bytes()) {
+		error!("{}", e);
+	}
 }

@@ -13,14 +13,17 @@
 - [x] `Coin` scena komponanto
 - [x] `Finish` scena komponanto
 - [x] `DamageTrigger` scena komponanto ~~(ludo kraŝas enigante ian ajn kunpuŝiĝilon kun alta rapideco) ([#184](https://github.com/dimforge/bevy_rapier/issues/184))~~
-- [ ] Realigi ludan `Health` komponanton
+- [x] Realigi ludan `Health` komponanton
 - [x] Ripari saltadon de ludanto
 - [ ] Limigi kameraan turnadon
 - [x] `InGame` uzanta interfaco
-- [ ] `GameOver` kaj `Win` statoj
-- [ ] Realigi poentaron (toml) + RPC
+- [x] `GameOver` kaj `Win` statoj
+- [x] Realigi poentaron (toml) + RPC
 
 ### Pliaj
+- [ ] Aldoni direktan lumon
+- [ ] Plibonigi paŭzomenuon
+- [ ] Fizike bazita bildido (ludanto ktp.) PBR
 - [ ] Krei ĉefajn ludajn nivelojn
 - [ ] Interscena ŝargilo
 - [x] Paŭzo-menuo

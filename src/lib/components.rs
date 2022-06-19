@@ -4,6 +4,47 @@ use bevy_rapier3d::prelude::*;
 use serde_derive::Deserialize;
 
 
+//==========STATES==============
+
+#[derive(Component)]
+pub struct MainMenu;
+
+#[derive(Component)]
+pub struct InGame;
+
+#[derive(Default, PartialEq, Clone)]
+pub struct Pause(pub bool);
+
+#[derive(Default)]
+pub struct Win;
+
+#[derive(Default)]
+pub struct GameOver;
+
+
+//==========DUMMIES==============
+
+#[derive(Component)]
+pub struct Player;
+
+#[derive(Component)]
+pub struct PlayerChild;
+
+#[derive(Component)]
+pub struct Ground;
+
+#[derive(Component)]
+pub struct Coin;
+
+#[derive(Component)]
+pub struct FinishTrigger;
+
+#[derive(Component)]
+pub struct DamageTrigger;
+
+
+//==========RES&COMPS==============
+
 #[derive(Deserialize)]
 pub struct PlayerTOML {
     pub playerinfo: PlayerInfo,
@@ -23,26 +64,14 @@ pub enum GameState {
 #[derive(Default)]
 pub struct CurrentLevel(pub String);
 
-#[derive(Default, PartialEq, Clone)]
-pub struct Pause(pub bool);
-
 #[derive(Default)]
 pub struct LevelDialog(pub bool);
-
-#[derive(Component)]
-pub struct MainMenu;
-
-#[derive(Component)]
-pub struct InGame;
 
 #[derive(Default)]
 pub struct Screen(pub f32, pub f32);
 
 #[derive(Default)]
 pub struct GltfMeshes (pub Handle<Gltf>);
-
-#[derive(Default)]
-pub struct Win(pub bool);
 
 #[derive(Default)]
 pub struct LoadedMeshes(pub Vec<Handle<Mesh>>);
@@ -55,24 +84,6 @@ pub struct Health(pub u8);
 
 #[derive(Component)]
 pub struct IsGround(pub bool);
-
-#[derive(Component)]
-pub struct Player;
-
-#[derive(Component)]
-pub struct PlayerChild;
-
-#[derive(Component)]
-pub struct Ground;
-
-#[derive(Component)]
-pub struct Coin;
-
-#[derive(Component)]
-pub struct FinishTrigger;
-
-#[derive(Component)]
-pub struct DamageTrigger;
 
 #[derive(Bundle)]
 pub struct PhysicsBundle {

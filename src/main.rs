@@ -75,6 +75,8 @@ fn main() {
         .add_system_set(
             ConditionSet::new()
                 .run_in_state(GameState::InGame)
+                .run_unless_resource_exists::<Win>()
+                .run_unless_resource_exists::<GameOver>()
                 .with_system(scene_processing)
                 .with_system(control_extras)
 				.with_system(pause)
@@ -85,6 +87,8 @@ fn main() {
             ConditionSet::new()
                 .run_in_state(GameState::InGame)
                 .run_if_resource_equals::<Pause>(Pause(false))
+                .run_unless_resource_exists::<Win>()
+                .run_unless_resource_exists::<GameOver>()
                 .with_system(control_character)
 				.with_system(pan_orbit_camera)
 				.with_system(get_coin)
@@ -96,7 +100,25 @@ fn main() {
             ConditionSet::new()
                 .run_in_state(GameState::InGame)
                 .run_if_resource_equals::<Pause>(Pause(true))
+                .run_unless_resource_exists::<Win>()
+                .run_unless_resource_exists::<GameOver>()
                 .with_system(pause_menu)
+                .into()
+        )
+        
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::InGame)
+                .run_if_resource_exists::<Win>()
+                .with_system(win)
+                .into()
+        )
+        
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::InGame)
+                .run_if_resource_exists::<GameOver>()
+                .with_system(game_over)
                 .into()
         )
         
@@ -134,6 +156,9 @@ fn menu_bg(
 	mut commands: Commands,
 	assets: Res<AssetServer>,
 ){
+	commands.remove_resource::<Win>();
+	commands.remove_resource::<GameOver>();
+	
 	let scene = assets.load("scenes/menu/menu.glb#Scene0");
 	commands.spawn()
 	.insert(MainMenu)
@@ -169,7 +194,7 @@ fn setup(
 	let window = windows.primary_mut();
 	window.set_cursor_lock_mode(true);
 	window.set_cursor_visibility(false);
-    
+	    
     if let Some(level) = level {
 		let gltf: Handle<Gltf> = assets.load(&level.0);
 		commands.insert_resource(GltfMeshes(gltf));
@@ -290,6 +315,7 @@ fn control_extras(
 ){	
 	if let Some(loaded_meshes) = loaded_meshes {
 		for (parent, ent, mesh) in q_child.iter() {
+			commands.entity(parent.0).insert(InGame);
 			for loaded_mesh in loaded_meshes.0.iter() {
 				if loaded_mesh == mesh {
 					if let Some(mesh) = assets_mesh.get(mesh) {
@@ -303,8 +329,7 @@ fn control_extras(
 										.insert(collider.clone())
 										.insert(Ccd::enabled())
 										.insert(ActiveCollisionTypes::default())
-										.insert(ActiveEvents::COLLISION_EVENTS)
-										.insert(InGame);
+										.insert(ActiveEvents::COLLISION_EVENTS);
 									}
 									
 									if v["type"].as_str() == Some("finish") {
@@ -384,8 +409,10 @@ fn spawn_camera(mut commands: Commands) {
 }
 
 fn control_character(
+	mut commands: Commands,
+	mut windows: ResMut<Windows>,
 	keys: Res<Input<KeyCode>>,
-	mut camera_query: Query<(&mut PanOrbitCamera, &Transform), Without<Player>>,
+	mut camera_query: Query<(&mut PanOrbitCamera, &mut Transform), Without<Player>>,
 	mut player_query: Query<(&mut Health, &mut Transform, &mut Velocity, &mut ExternalImpulse, &mut IsGround), With<Player>>,
 	pl_child_query: Query<Entity, With<PlayerChild>>,
 	finish_query: Query<Entity, With<FinishTrigger>>,
@@ -393,8 +420,9 @@ fn control_character(
 	damage_query: Query<Entity, With<DamageTrigger>>,
 	mut collision_events: EventReader<CollisionEvent>,
 ){	
-	let (mut _health, mut transform, mut _player_velocity, mut _player_impulse, mut is_ground) = player_query.single_mut();
-	let (mut poc, camera_transform) = camera_query.single_mut();
+	let window = windows.primary_mut();
+	let (mut health, mut transform, mut _player_velocity, mut _player_impulse, mut is_ground) = player_query.single_mut();
+	let (mut poc, mut camera_transform) = camera_query.single_mut();
 	let player_child = pl_child_query.single();
 	
 	for collision_event in collision_events.iter() {
@@ -407,15 +435,26 @@ fn control_character(
 			
 			for finish_ent in finish_query.iter() {
 				if (finish_ent.eq(ent1) && player_child.eq(ent2)) || (finish_ent.eq(ent2) && player_child.eq(ent1)) {
-					println!("Vi ekvenkis!");
+					window.set_cursor_lock_mode(false);
+					window.set_cursor_visibility(true);
+					commands.insert_resource(Win);
 				}
 			}
 			
 			for damage_ent in damage_query.iter() {
 				if (damage_ent.eq(ent1) && player_child.eq(ent2)) || (damage_ent.eq(ent2) && player_child.eq(ent1)) {
-					println!("Ok");
-					transform.translation = Vec3::new(-5.0, 0.0, 0.0);
-					_player_velocity.linvel = Vec3::ZERO;
+					if health.0 > 1 {
+						health.0 -= 1;
+						transform.translation = Vec3::new(-5.0, 0.0, 0.0);
+						_player_velocity.linvel = Vec3::ZERO;
+					} else {
+						transform.translation = Vec3::new(-5.0, 0.0, 0.0);
+						_player_velocity.linvel = Vec3::ZERO;
+						camera_transform.translation = Vec3::new(0.0, 16.0, -16.0);
+						window.set_cursor_lock_mode(false);
+						window.set_cursor_visibility(true);
+						commands.insert_resource(GameOver);
+					}
 				}
 			}
 		}
@@ -424,12 +463,6 @@ fn control_character(
 			for ground_ent in ground_query.iter() {
 				if (ground_ent.eq(ent1) && player_child.eq(ent2)) || (ground_ent.eq(ent2) && player_child.eq(ent1)) {
 					is_ground.0 = false;
-				}
-			}
-			
-			for damage_ent in damage_query.iter() {
-				if (damage_ent.eq(ent1) && player_child.eq(ent2)) || (damage_ent.eq(ent2) && player_child.eq(ent1)) {
-					//
 				}
 			}
 		}
