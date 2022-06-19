@@ -60,7 +60,7 @@ pub fn pan_orbit_camera(
             let yaw = Quat::from_rotation_y(-delta_x);
             let pitch = Quat::from_rotation_x(-delta_y);
             transform.rotation = yaw * transform.rotation; // rotate around global y axis
-            transform.rotation = transform.rotation * pitch; // rotate around local x axis
+            transform.rotation = transform.rotation * pitch; // rotate around local x axis            
         } else if scroll.abs() > 0.0 {
             pan_orbit.radius -= scroll * pan_orbit.radius * 0.2;
             pan_orbit.radius = f32::min(pan_orbit.radius, 30.0);

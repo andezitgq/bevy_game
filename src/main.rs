@@ -38,9 +38,9 @@ fn main() {
 		.insert_resource(Screen(0.0, 0.0))
 		.insert_resource(Pause(false))
 		.insert_resource(Msaa { samples: 4 })
-        .insert_resource(AmbientLight {
+		.insert_resource(AmbientLight {
             color: Color::WHITE,
-            brightness: 1.0 / 5.0f32,
+            brightness: 2.0 / 5.0f32,
         })
         
 		.add_plugins(DefaultPlugins)
@@ -51,7 +51,7 @@ fn main() {
 		.add_plugin(ObjPlugin)
 		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        .add_plugin(RapierDebugRenderPlugin::default())
+        //.add_plugin(RapierDebugRenderPlugin::default())
         
         .add_loopless_state(GameState::MainMenu) 
 
@@ -135,15 +135,16 @@ fn pause(
 	mut is_pause: ResMut<Pause>,
 	mut rapier_config: ResMut<RapierConfiguration>,
 ){
-	let window = windows.primary_mut();
 	if keys.just_pressed(KeyCode::Escape) {
 		is_pause.0 = !is_pause.0;
 		if is_pause.0 {
+			let window = windows.primary_mut();
 			rapier_config.physics_pipeline_active = false;
 			rapier_config.query_pipeline_active = false;
 			window.set_cursor_lock_mode(false);
 			window.set_cursor_visibility(true);
 		} else {
+			let window = windows.primary_mut();
 			rapier_config.physics_pipeline_active = true;
 			rapier_config.query_pipeline_active = true;
 			window.set_cursor_lock_mode(true);
@@ -158,6 +159,7 @@ fn menu_bg(
 ){
 	commands.remove_resource::<Win>();
 	commands.remove_resource::<GameOver>();
+	commands.remove_resource::<LevelDialog>();
 	
 	let scene = assets.load("scenes/menu/menu.glb#Scene0");
 	commands.spawn()
@@ -166,13 +168,12 @@ fn menu_bg(
         parent.spawn_scene(scene);
     });
 	
-	commands.spawn_bundle(PointLightBundle {
-        point_light: PointLight {
-            intensity: 3000.0,
+	commands.spawn_bundle(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            illuminance: 12000.0,
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     })
     .insert(MainMenu);
@@ -201,15 +202,16 @@ fn setup(
 	}
     
     //Lumo
-    commands.spawn_bundle(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
+    commands.spawn_bundle(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            illuminance: 12000.0,
             shadows_enabled: true,
             ..default()
         },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
+        transform: Transform::from_rotation(Quat::from_axis_angle(Vec3::X, radian(-60.0))),
         ..default()
-    }).insert(InGame);
+    })
+    .insert(MainMenu);
 	
 	//Ludanto
 	commands.spawn_bundle(PlayerBundle {

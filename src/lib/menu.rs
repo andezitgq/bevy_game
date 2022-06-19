@@ -101,14 +101,20 @@ pub fn pause_menu(
 	mut egui_ctx: ResMut<EguiContext>,
 	mut rapier_config: ResMut<RapierConfiguration>,
 	mut exit: EventWriter<AppExit>,
+	mut windows: ResMut<Windows>,
 	screen: Res<Screen>,
 ){
 	egui::SidePanel::left("side_panel").default_width(200.0).resizable(false).show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {
 			ui.allocate_space(egui::Vec2::new(0.0, screen.1 / 2.0 - 25.0));
 			ui.heading("Kamplud'");
-			if ui.add(egui::Button::new("Ludi").frame(false)).clicked() {
-				commands.insert_resource(LevelDialog(true));
+			if ui.add(egui::Button::new("Daŭri").frame(false)).clicked() {
+				let window = windows.primary_mut();
+				commands.insert_resource(Pause(false));
+				rapier_config.physics_pipeline_active = true;
+				rapier_config.query_pipeline_active = true;
+				window.set_cursor_lock_mode(true);
+				window.set_cursor_visibility(false);
 			}
 			
 			if ui.add(egui::Button::new("Eliri al menuo").frame(false)).clicked() {
