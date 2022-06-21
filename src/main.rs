@@ -15,6 +15,7 @@ use bevy_discord_presence::{
     config::{RPCConfig, RPCPlugin},
 };
 use iyes_loopless::prelude::*;
+use iyes_progress::prelude::*;
 use serde_json::Value;
 
 use lib::orbit_camera::*;
@@ -55,9 +56,25 @@ fn main() {
 		.add_plugin(ObjPlugin)
 		.add_plugin(EguiPlugin)
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-        //.add_plugin(RapierDebugRenderPlugin::default())
         
+        //==================LOADING==================//
         .add_loopless_state(GameState::MainMenu) 
+        /*.add_plugin(
+            ProgressPlugin::new(GameState::Splash)
+                .continue_to(GameState::MainMenu)
+                .track_assets())
+        .add_plugin(
+			ProgressPlugin::new(GameState::GameLoading)
+				.continue_to(GameState::InGame))
+				
+		.add_enter_system(GameState::Splash, load_ui_assets)
+        .add_system_set(
+            ConditionSet::new()
+                .run_in_state(GameState::GameLoading)
+                .with_system(loading.track_progress())
+                .with_system(ui_progress_bar)
+                .into()
+        )*/
 
 		.add_enter_system(GameState::MainMenu, menu_bg)
 		.add_enter_system(GameState::MainMenu, ds_menu)

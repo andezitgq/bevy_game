@@ -57,7 +57,9 @@ pub struct PlayerInfo {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GameState {
+    Splash,
     MainMenu,
+    GameLoading,
     InGame,
 }
 
