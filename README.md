@@ -21,13 +21,12 @@
 - [x] Realigi poentaron (toml) + RPC
 
 ### Pliaj
-- [ ] Aldoni direktan lumon
-- [ ] Plibonigi paŭzomenuon
-- [ ] Fizike bazita bildido (ludanto ktp.) PBR
+- [x] Aldoni direktan lumon
+- [ ] Fizike bazita bildigo (ludanto ktp.)
 - [ ] Krei ĉefajn ludajn nivelojn
 - [ ] Interscena ŝargilo
 - [x] Paŭzo-menuo
-- [ ] Muziko
+- [x] Muziko
 - [ ] Krei ĉefmenuan scenon
 - [x] `Discord Rich Presence` (permana kompilado, ĉar oficiala `crate` kaŭzas aferon [#3](https://github.com/jewlexx/discord-presence/issues/3))
 

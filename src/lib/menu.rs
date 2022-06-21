@@ -92,6 +92,10 @@ pub fn main_menu(
                 "farita de linuksulo",
                 "https://github.com/andezitgq/",
             ));
+            ui.add(egui::Hyperlink::from_label_and_url(
+                "muziko de Kevin MacLeod",
+                "https://incompetech.com/music/royalty-free/music.html"
+            ));
         });
     });
 }
@@ -107,7 +111,7 @@ pub fn pause_menu(
 	egui::SidePanel::left("side_panel").default_width(200.0).resizable(false).show(egui_ctx.ctx_mut(), |ui| {
         ui.vertical_centered(|ui| {
 			ui.allocate_space(egui::Vec2::new(0.0, screen.1 / 2.0 - 25.0));
-			ui.heading("Kamplud'");
+			ui.heading("Paŭzo");
 			if ui.add(egui::Button::new("Daŭri").frame(false)).clicked() {
 				let window = windows.primary_mut();
 				commands.insert_resource(Pause(false));

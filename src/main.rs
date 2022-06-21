@@ -9,6 +9,7 @@ use bevy::gltf::{Gltf, GltfNode, GltfMesh, GltfExtras};
 use bevy::render::render_resource::{SamplerDescriptor, FilterMode};
 use bevy_obj::*;
 use bevy_rapier3d::prelude::*;
+use bevy_kira_audio::{Audio, AudioPlugin};
 use bevy_egui::EguiPlugin;
 use bevy_discord_presence::{
     config::{RPCConfig, RPCPlugin},
@@ -22,6 +23,8 @@ use lib::menu::*;
 use lib::token::*;
 use lib::components::*;
 use lib::presence::*;
+
+use lib::eo::*;
 
 fn main() {
 	App::new()
@@ -44,6 +47,7 @@ fn main() {
         })
         
 		.add_plugins(DefaultPlugins)
+		.add_plugin(AudioPlugin)
 		.add_plugin(RPCPlugin(RPCConfig{
 			app_id: token(),
 			show_time: true,
@@ -156,10 +160,14 @@ fn pause(
 fn menu_bg(
 	mut commands: Commands,
 	assets: Res<AssetServer>,
+	audio: Res<Audio>,
 ){
 	commands.remove_resource::<Win>();
 	commands.remove_resource::<GameOver>();
 	commands.remove_resource::<LevelDialog>();
+	
+	audio.stop();
+	audio.play_looped(assets.load("music/blippy_trance.mp3"));
 	
 	let scene = assets.load("scenes/menu/menu.glb#Scene0");
 	commands.spawn()
@@ -174,6 +182,7 @@ fn menu_bg(
             shadows_enabled: true,
             ..default()
         },
+        transform: Transform::from_rotation(Quat::from_axis_angle(Vec3::X, radian(-60.0))),
         ..default()
     })
     .insert(MainMenu);
@@ -191,10 +200,14 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     assets: Res<AssetServer>,
     level: Option<Res<CurrentLevel>>,
+    audio: Res<Audio>,
 ){
 	let window = windows.primary_mut();
 	window.set_cursor_lock_mode(true);
 	window.set_cursor_visibility(false);
+	
+	audio.stop();
+	audio.play_looped(assets.load("music/voxel_revolution.mp3"));
 	    
     if let Some(level) = level {
 		let gltf: Handle<Gltf> = assets.load(&level.0);
@@ -211,7 +224,7 @@ fn setup(
         transform: Transform::from_rotation(Quat::from_axis_angle(Vec3::X, radian(-60.0))),
         ..default()
     })
-    .insert(MainMenu);
+    .insert(InGame);
 	
 	//Ludanto
 	commands.spawn_bundle(PlayerBundle {
@@ -234,7 +247,18 @@ fn setup(
 		
 		pbr: PbrBundle {
 			mesh: assets.load("models/player.obj"),
-			material: materials.add(diffuse_mat("textures/player.jpg", &assets)),
+			material: materials.add(StandardMaterial{
+				//base_color_texture: 			Some(assets.load("textures/player/albedo.jpg")),
+				//metallic_roughness_texture:		Some(assets.load("textures/player/rgh.jpg")),
+				normal_map_texture: 			Some(assets.load("textures/player/nrm.jpg")),
+				occlusion_texture: 				Some(assets.load("textures/player/ao.jpg")),
+				flip_normal_map_y:				true,
+				unlit: 							false,
+				double_sided: 					false,
+				perceptual_roughness: 			0.0,
+				metallic: 						1.0,
+				..default()
+			}),
 			transform: Transform::from_xyz(-5.0, 0.0, 0.0),
 			..default()
 		},
@@ -399,6 +423,7 @@ fn control_extras(
 fn spawn_camera(mut commands: Commands) {
     let translation = Vec3::new(0.0, 16.0, -16.0);
     let radius = translation.length();
+    info!("{}", radius);
 
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_translation(translation)
@@ -478,10 +503,10 @@ fn control_character(
 								  (transform.translation.z - ct0.z) / 16.0);
 	let perp_vector = Quat::from_axis_angle(Vec3::Y, radian(90.0)).mul(direct_vector);
 	
-	if keys.pressed(KeyCode::W) { _player_impulse.impulse = direct_vector * 2.0;}
-	if keys.pressed(KeyCode::S) { _player_impulse.impulse = -direct_vector * 2.0;}
-	if keys.pressed(KeyCode::A) { _player_impulse.impulse = perp_vector * 2.0;}
-	if keys.pressed(KeyCode::D) { _player_impulse.impulse = -perp_vector * 2.0;}
+	if keys.pressed(KeyCode::W) { _player_impulse.impulse = direct_vector * 2.0 * 30.0 / poc.radius;}
+	if keys.pressed(KeyCode::S) { _player_impulse.impulse = -direct_vector * 2.0 * 30.0 / poc.radius;}
+	if keys.pressed(KeyCode::A) { _player_impulse.impulse = perp_vector * 2.0 * 30.0 / poc.radius;}
+	if keys.pressed(KeyCode::D) { _player_impulse.impulse = -perp_vector * 2.0 * 30.0 / poc.radius;}
 	
 	if keys.pressed(KeyCode::W) && keys.pressed(KeyCode::A) { _player_impulse.impulse = (direct_vector + perp_vector) * 2.0;}
 	if keys.pressed(KeyCode::S) && keys.pressed(KeyCode::A) { _player_impulse.impulse = (perp_vector - direct_vector) * 2.0;}
@@ -535,15 +560,6 @@ fn texture_filtering(
 				txt.sampler_descriptor = desc.clone();
 			}
 		}
-	}
-}
-
-fn diffuse_mat(path: &str, assets: &Res<AssetServer>) -> StandardMaterial {	
-	StandardMaterial {
-		base_color_texture: Some(assets.load(path)),
-		alpha_mode: AlphaMode::Blend,
-        unlit: true,
-		..default()
 	}
 }
 
