@@ -1987,7 +1987,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "46cae0743794e8b757a4c17be94b24d600edb0c3d409bc5a2e7993ccc98d8130"
 dependencies = [
  "bevy_app",
+ "bevy_asset",
  "bevy_ecs",
+ "bevy_utils",
+ "iyes_loopless",
 ]
 
 [[package]]

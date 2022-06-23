@@ -22,6 +22,7 @@
 
 ### Pliaj
 - [x] Aldoni direktan lumon
+- [ ] Muziko-agordoj
 - [ ] Fizike bazita bildigo (ludanto ktp.)
 - [ ] Krei ĉefajn ludajn nivelojn
 - [ ] Interscena ŝargilo

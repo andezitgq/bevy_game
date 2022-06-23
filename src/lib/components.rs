@@ -6,6 +6,27 @@ use serde_derive::Deserialize;
 
 //==========STATES==============
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum GameState {
+    Splash,
+    MainMenu,
+    GameLoading,
+    InGame,
+}
+
+#[derive(Component)]
+pub struct Splash;
+
+#[derive(Component)]
+pub struct Fade {
+	pub is_faded: bool,
+}
+
+#[derive(Component)]
+pub struct SplashTimer {
+    pub timer: Timer,
+}
+
 #[derive(Component)]
 pub struct MainMenu;
 
@@ -44,6 +65,12 @@ pub struct DamageTrigger;
 
 
 //==========RES&COMPS==============
+#[derive(Default)]
+pub struct MenuAssets {
+    pub menu_music: Handle<bevy_kira_audio::AudioSource>,
+    pub game_music: Handle<bevy_kira_audio::AudioSource>,
+    pub menu_scene: Handle<Scene>,
+}
 
 #[derive(Deserialize)]
 pub struct PlayerTOML {
@@ -53,14 +80,6 @@ pub struct PlayerTOML {
 #[derive(Deserialize)]
 pub struct PlayerInfo {
 	pub score: usize,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum GameState {
-    Splash,
-    MainMenu,
-    GameLoading,
-    InGame,
 }
 
 #[derive(Default)]

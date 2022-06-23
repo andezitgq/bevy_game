@@ -25,8 +25,6 @@ use lib::token::*;
 use lib::components::*;
 use lib::presence::*;
 
-use lib::eo::*;
-
 fn main() {
 	App::new()
 		.insert_resource(WindowDescriptor{
@@ -58,24 +56,24 @@ fn main() {
 		.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
         
         //==================LOADING==================//
-        .add_loopless_state(GameState::MainMenu) 
-        /*.add_plugin(
-            ProgressPlugin::new(GameState::Splash)
-                .continue_to(GameState::MainMenu)
-                .track_assets())
-        .add_plugin(
-			ProgressPlugin::new(GameState::GameLoading)
-				.continue_to(GameState::InGame))
-				
-		.add_enter_system(GameState::Splash, load_ui_assets)
-        .add_system_set(
+        .add_loopless_state(GameState::Splash) 
+		.add_enter_system(GameState::Splash, splash_start)
+		.add_exit_system(GameState::Splash, despawn_with::<Splash>)
+		.add_system_set(
             ConditionSet::new()
-                .run_in_state(GameState::GameLoading)
-                .with_system(loading.track_progress())
-                .with_system(ui_progress_bar)
+                .run_in_state(GameState::Splash)
+                .with_system(splash_screen)
                 .into()
-        )*/
-
+        )
+		
+		.add_system_set(
+			ConditionSet::new()
+				.run_in_state(GameState::GameLoading)
+				//.with_system(loading.track_progress())
+                //.with_system(ui_progress_bar)
+                .into()
+        )
+		
 		.add_enter_system(GameState::MainMenu, menu_bg)
 		.add_enter_system(GameState::MainMenu, ds_menu)
 		.add_enter_system(GameState::MainMenu, setup_font)
@@ -158,14 +156,13 @@ fn pause(
 ){
 	if keys.just_pressed(KeyCode::Escape) {
 		is_pause.0 = !is_pause.0;
+		let window = windows.primary_mut();
 		if is_pause.0 {
-			let window = windows.primary_mut();
 			rapier_config.physics_pipeline_active = false;
 			rapier_config.query_pipeline_active = false;
 			window.set_cursor_lock_mode(false);
 			window.set_cursor_visibility(true);
 		} else {
-			let window = windows.primary_mut();
 			rapier_config.physics_pipeline_active = true;
 			rapier_config.query_pipeline_active = true;
 			window.set_cursor_lock_mode(true);
@@ -174,23 +171,102 @@ fn pause(
 	}
 }
 
+fn splash_start(
+    mut commands: Commands,
+	assets: Res<AssetServer>,
+){
+	let menu_music = assets.load("music/blippy_trance.mp3");
+	let game_music = assets.load("music/voxel_revolution.mp3");
+	let menu_scene = assets.load("scenes/menu/menu.glb#Scene0");
+	
+	commands.insert_resource(MenuAssets {
+		menu_music,
+		game_music,
+		menu_scene,
+	});
+	
+	commands.spawn_bundle(NodeBundle {
+        style: Style {
+            size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+            justify_content: JustifyContent::SpaceBetween,
+            ..default()
+        },
+        color: Color::NONE.into(),
+        ..default()
+    })
+    .insert(Splash)
+	.with_children(|parent| {
+		parent.spawn_bundle(ImageBundle {
+            style: Style {
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                ..default()
+            },
+            image: assets.load("textures/header.png").into(),
+            ..default()
+        }).insert(Splash)
+        .with_children(|parent| {
+			parent.spawn_bundle(NodeBundle {
+				style: Style {
+					size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+					..default()
+				},
+				color: Color::rgba(0.0, 0.0, 0.0, 1.0).into(),
+				..default()
+			}).insert(Fade {is_faded: true});
+		});
+	});
+}
+
+fn splash_screen(
+	mut commands: Commands,
+	mut q: Query<&mut SplashTimer>,
+	mut q_color: Query<(&mut UiColor, &mut Fade)>,
+	time: Res<Time>,
+){	
+	for (mut color, mut fade) in q_color.iter_mut(){		
+		if fade.is_faded {
+			let alpha: f32 = color.0.a() - (0.001 * time.delta().as_millis() as f32);
+			
+			if color.0.a() > 0.0 {
+				color.0.set_a(alpha);
+			} else {
+				commands.spawn().insert(SplashTimer {
+					timer: Timer::new(std::time::Duration::from_secs(3), false),
+				}).insert(Splash);
+			}
+			
+			for mut splash_timer in q.iter_mut(){
+				splash_timer.timer.tick(time.delta());
+				if splash_timer.timer.finished() {
+					fade.is_faded = false;
+				}
+			}
+			
+		} else {
+			let alpha: f32 = color.0.a() + (0.001 * time.delta().as_millis() as f32);
+			if color.0.a() < 1.0 {
+				color.0.set_a(alpha);
+			} else {
+				commands.insert_resource(NextState(GameState::MainMenu));
+			}
+		}
+	}
+}
+
 fn menu_bg(
 	mut commands: Commands,
-	assets: Res<AssetServer>,
 	audio: Res<Audio>,
+	menu_assets: Res<MenuAssets>,
 ){
+	audio.stop();
 	commands.remove_resource::<Win>();
 	commands.remove_resource::<GameOver>();
 	commands.remove_resource::<LevelDialog>();
 	
-	audio.stop();
-	audio.play_looped(assets.load("music/blippy_trance.mp3"));
-	
-	let scene = assets.load("scenes/menu/menu.glb#Scene0");
 	commands.spawn()
 	.insert(MainMenu)
 	.with_children(|parent| {
-        parent.spawn_scene(scene);
+        parent.spawn_scene(menu_assets.menu_scene.clone());
     });
 	
 	commands.spawn_bundle(DirectionalLightBundle {
@@ -209,12 +285,15 @@ fn menu_bg(
 		..default()
 	})
 	.insert(MainMenu);
+
+	audio.play_looped(menu_assets.menu_music.clone());
 }
 
 fn setup(
 	mut windows: ResMut<Windows>,
 	mut commands: Commands,	
     mut materials: ResMut<Assets<StandardMaterial>>,
+    menu_assets: Res<MenuAssets>,
     assets: Res<AssetServer>,
     level: Option<Res<CurrentLevel>>,
     audio: Res<Audio>,
@@ -224,7 +303,7 @@ fn setup(
 	window.set_cursor_visibility(false);
 	
 	audio.stop();
-	audio.play_looped(assets.load("music/voxel_revolution.mp3"));
+	audio.play_looped(menu_assets.game_music.clone());
 	    
     if let Some(level) = level {
 		let gltf: Handle<Gltf> = assets.load(&level.0);
